@@ -1,12 +1,21 @@
 /*              Include              */
+// std
+use std::sync::Arc;
+
+// crate
+use crate::handlers;
+use crate::AppState;
+
 // Axum
 use axum::{
-    routing::{get},
+    routing::{post},
     Router
 };
 
 /*              Functions            */
-pub fn create_router() -> Router {
+pub fn create_router(shared_state: Arc<AppState>) -> Router {
     Router::new()
-        .route("/api", get(|| async {"hello!"}))
+        .route("/api/auth/sign_in_auth", post(handlers::sign_in_auth))
+        .route("/api/auth/sign_up_auth", post(handlers::sign_up_auth))
+        .with_state(shared_state)
 }

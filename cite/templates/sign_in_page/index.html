@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link href="/static/styles/sign_in_page/form.css" rel="stylesheet">
+    <link href="/static/styles/sign_in_page/style.css" rel="stylesheet">
+    <link href="/static/styles/base_style.css" rel="stylesheet">
+    <title>Вход в аккаунт</title>
+</head>
+<body>
+    <div id="form">
+        <form method="post">
+            <section>
+                <h3>Войти в аккаунт</h3>
+            </section>
+            <section>
+                <!-- Login -->
+                <div class="form__input-div">
+                    <!-- <label for="form__login">Логин</label> -->
+                    <input type="text" id="form__login" name="login" placeholder="Введите почту или логин" required/>
+                </div>
+                <!-- Password -->
+                <div class="form__input-div">
+                    <!-- <label for="password">Пароль</label> -->
+                    <input type="password" id="password" name="password" maxlength="128" placeholder="Введите пароль" required/>
+                </div>
+            </section>
+            <section>
+                <div class="form__button-div button-sign-in">
+                    <button>Войти</button>  
+                </div>
+                <div class="form__button-div button-sign-up">
+                    <a href="/sign_up"><button type="button">Зарегестрироваться</button></a>
+                </div>
+            </section>
+        </form>
+    </div>
+</body>
+</html>

@@ -1,4 +1,7 @@
 /*              Includes                 */
+// Crate
+use crate::answers::{AuthAnswer, AuthStatus};
+
 // Askama
 use askama::Template;
 
@@ -11,6 +14,9 @@ use axum::{
     },
     http::StatusCode
 };
+
+// Serde
+
 
 /*                Functions              */
 // Base html template struct and handler
@@ -43,15 +49,65 @@ pub async fn main_page() -> impl IntoResponse {
 }
 
 
-/*          Auth page            */
+/*          Auth pages           */
+/* Sign in */
+// get
 #[derive(Template)]
-#[template(path = "authorization_page/index.html")]
-struct AuthPageTemplate {}
+#[template(path = "sign_in_page/index.html")]
+struct SignInPageTemplate {}
 
-pub async fn auth_page() -> impl IntoResponse {
-    let template = AuthPageTemplate {};
+pub async fn sign_in_page() -> impl IntoResponse {
+    let template = SignInPageTemplate {};
     HtmlTemplate(template)
 }
+
+// post
+pub async fn sign_in_post(raw_data: String) -> &'static str {
+    let client = reqwest::Client::new();
+    // Get answer about user from auth api
+    match serde_json::from_str::<AuthAnswer>(&client.post("http://localhost:8081/api/auth/sign_in_auth")
+            .body(raw_data)
+            .send()
+            .await.unwrap().text().await.unwrap()
+        ) {
+            Ok(data) => {
+                println!("{:?}", data)
+            }
+            Err(err) => {println!("Error to parse json from answer. Error msg = {}", err)}
+        }
+
+    "Ok"
+}
+
+/* Sign up */
+// get
+#[derive(Template)]
+#[template(path = "sign_up_page/index.html")]
+struct SignUpPageTemplate {}
+
+pub async fn sign_up_page() -> impl IntoResponse {
+    let template = SignUpPageTemplate {};
+    HtmlTemplate(template)
+}
+
+//post
+pub async fn sign_up_post(raw_data: String) -> impl IntoResponse {
+    let client = reqwest::Client::new();
+    // Get answer about user from auth api
+    match serde_json::from_str::<AuthAnswer>(&client.post("http://localhost:8081/api/auth/sign_up_auth")
+            .body(raw_data)
+            .send()
+            .await.unwrap().text().await.unwrap()
+        ) {
+            Ok(data) => {
+                println!("{:?}", data)
+            }
+            Err(err) => {println!("Error to parse json from answer. Error msg = {}", err)}
+        }
+
+    "Ok"
+}
+
 
 
 /*          Chat page            */
