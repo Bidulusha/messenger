@@ -1,0 +1,15 @@
+{
+	"compilerOptions": {
+		"target": "es2020",
+		"lib": ["ES5", "ES2015", "dom", "ES2017.Object", ],
+		"module": "es2020",
+		"removeComments": true,
+		"sourceMap": true,
+		"moduleResolution": "bundler",
+		"strictPropertyInitialization": false,
+		"rootDir": "../",
+		"paths": {
+			"/static/scripts/admin_page/*": ["./*"],
+		},
+	}
+}

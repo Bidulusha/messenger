@@ -38,9 +38,9 @@ $$;
 -- Создаем таблицы
 create table if not exists public.users_info (
     id integer NOT NULL GENERATED ALWAYS AS IDENTITY (INCREMENT 1 START 1 MINVALUE 1 MAXVALUE 2147483647 CACHE 1),
+    email varchar(64) NOT NULL,
     login varchar(32) NOT NULL,
     password varchar(128) NOT NULL,
-    active_sessions bigint[] NOT NULL,
     chats bigint[] NOT NULL
 );
 
@@ -51,11 +51,11 @@ create table if not exists public.chats_info(
     members_id bigint[] NOT NULL
 );
 
-create table if not exists public.active_sessions (
-    id integer NOT NULL GENERATED ALWAYS AS IDENTITY (INCREMENT 1 START 1 MINVALUE 1 MAXVALUE 2147483647 CACHE 1),
-    user_id bigint NOT NULL,
-    token text NOT NULL
-);
+-- create table if not exists public.active_sessions (
+--     id integer NOT NULL GENERATED ALWAYS AS IDENTITY (INCREMENT 1 START 1 MINVALUE 1 MAXVALUE 2147483647 CACHE 1),
+--     user_id bigint NOT NULL,
+--     token text NOT NULL
+-- );
 
 -- Даем права на таблицу и последовательности
 GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO messenger_user;

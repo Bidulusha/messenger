@@ -1,0 +1,9 @@
+main {
+    display: flex;
+    flex-direction: row;
+}
+
+.sidebar{
+    border: 1px solid black;
+    height: 100vh;
+}

@@ -4,7 +4,7 @@ use crate::handlers;
 
 // Axum
 use axum::{
-    routing::{get, post},
+    routing::{get, any},
     Router
 };
 
@@ -20,11 +20,9 @@ pub fn create_router() -> Router {
         // chat
         .route("/chat", get(handlers::chat_page))
         // sign in
-        .route("/sign_in", get(handlers::sign_in_page))
-        .route("/sign_in", post(handlers::sign_in_post))
+        .route("/sign_in", any(handlers::sign_in_page))
         //sign up
-        .route("/sign_up", get(handlers::sign_up_page))
-        .route("/sign_up", post(handlers::sign_up_post))
+        .route("/sign_up", any(handlers::sign_up_page))
         // nest service
         .nest_service("/static", ServeDir::new("static"))
 }

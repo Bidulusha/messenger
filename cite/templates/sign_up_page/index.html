@@ -10,41 +10,40 @@
 </head>
 <body>
     <div id="form">
-        <form method="post">
+        <form>
             <section>
                 <h3>Создать аккаунт</h3>
             </section>
             <section>
                 <!-- Email -->
                 <div class="form__input-div">
-                    <!-- <label for="form__login">Логин</label> -->
-                    <input type="email" id="form__login" name="email" placeholder="Введите почту" required/>
+                    <input type="email" id="form__email" name="email" placeholder="Введите почту" required/>
                 </div>
                 <!-- Login -->
                 <div class="form__input-div">
-                    <!-- <label for="form__login">Логин</label> -->
                     <input type="text" id="form__login" name="login" placeholder="Введите логин" required/>
                 </div>
                 <!-- Password -->
                 <div class="form__input-div">
                     <!-- <label for="password">Пароль</label> -->
-                    <input type="password" id="password" name="password" maxlength="128" placeholder="Введите пароль" required/>
+                    <input type="password" id="form__password" name="password" maxlength="128" placeholder="Введите пароль" required/>
                 </div>
                 <!-- Password check -->
                 <div class="form__input-div">
                     <!-- <label for="password">Пароль</label> -->
-                    <input type="password" id="password" maxlength="128" placeholder="Повторите пароль" required/>
+                    <input type="password" id="form__second_password" maxlength="128" placeholder="Повторите пароль" required/>
                 </div>
             </section>
             <section>
-                <div class="form__button-div button-sign-in">
+                <div class="form__button-div button-sign-up">
                     <button>Создать аккаунт</button>  
                 </div>
-                <div class="form__button-div button-sign-up">
+                <div class="form__button-div button-sign-in">
                     <a href="/sign_in"><button type="button">Уже зарегестрирован</button></a>
                 </div>
             </section>
         </form>
     </div>
+    <script src="/static/scripts/sign_up/sign_up_script.js"></script>
 </body>
 </html>

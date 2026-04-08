@@ -7,8 +7,13 @@ use serde::{Serialize, Deserialize};
 // Status enum
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum AuthStatus {
-    OK = 0,
-    ERR = 1
+    OK,
+    ERR,
+    USER_NOT_FOUND,
+    USER_ALREADY_EXISTS,
+    SIGNIN_DATA_ERROR,
+    ACCES_ALLOWED,
+    ACCESS_DENIED
 }
 // Auth answer
 #[derive(Debug, Clone, Serialize, Deserialize)]

@@ -5,6 +5,7 @@ mod handlers;
 mod model;
 mod structures;
 mod database;
+mod token;
 
 // std
 use std::sync::Arc;
@@ -18,6 +19,12 @@ use tokio_postgres::{
     Error,
     Client
 };
+
+// tower http
+use tower_http::cors::{CorsLayer, Any, AllowOrigin};
+
+// http
+use http::Method;
 
 // Project files
 use route::create_router;
@@ -55,12 +62,15 @@ async fn main() -> Result<(), Error>{
     let state = AppState{
         client: Arc::new(client)
     };
-
-    let ans = model::UsersInfo::select_all(&state.client).await;
-    println!("{:?}", ans);
-
+    
     // Create app with state
-    let app = create_router(Arc::new(state));
+    let cors = CorsLayer::new()
+        .allow_origin(AllowOrigin::exact("http://localhost:3000".parse().unwrap()))
+        .allow_methods([Method::GET, Method::POST, Method::OPTIONS]) // Разрешаем OPTIONS
+        .allow_headers([http::header::CONTENT_TYPE, http::header::AUTHORIZATION]) // Разрешаем нужные заголовки
+        .allow_credentials(true); // Если используете cookies/сессии
+    
+    let app = create_router(Arc::new(state)).layer(cors);
     let listener = tokio::net::TcpListener::bind("0.0.0.0:8081").await.unwrap();
 
     axum::serve(listener, app).await.unwrap();

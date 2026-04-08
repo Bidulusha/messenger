@@ -61,23 +61,23 @@ pub async fn sign_in_page() -> impl IntoResponse {
     HtmlTemplate(template)
 }
 
-// post
-pub async fn sign_in_post(raw_data: String) -> &'static str {
-    let client = reqwest::Client::new();
-    // Get answer about user from auth api
-    match serde_json::from_str::<AuthAnswer>(&client.post("http://localhost:8081/api/auth/sign_in_auth")
-            .body(raw_data)
-            .send()
-            .await.unwrap().text().await.unwrap()
-        ) {
-            Ok(data) => {
-                println!("{:?}", data)
-            }
-            Err(err) => {println!("Error to parse json from answer. Error msg = {}", err)}
-        }
+// // post
+// pub async fn sign_in_post(raw_data: String) -> &'static str {
+//     let client = reqwest::Client::new();
+//     // Get answer about user from auth api
+//     match serde_json::from_str::<AuthAnswer>(&client.post("http://localhost:8081/api/auth/sign_in_auth")
+//             .body(raw_data)
+//             .send()
+//             .await.unwrap().text().await.unwrap()
+//         ) {
+//             Ok(data) => {
+//                 println!("{:?}", data)
+//             }
+//             Err(err) => {println!("Error to parse json from answer. Error msg = {}", err)}
+//         }
 
-    "Ok"
-}
+//     "Ok"
+// }
 
 /* Sign up */
 // get
@@ -91,22 +91,24 @@ pub async fn sign_up_page() -> impl IntoResponse {
 }
 
 //post
-pub async fn sign_up_post(raw_data: String) -> impl IntoResponse {
-    let client = reqwest::Client::new();
-    // Get answer about user from auth api
-    match serde_json::from_str::<AuthAnswer>(&client.post("http://localhost:8081/api/auth/sign_up_auth")
-            .body(raw_data)
-            .send()
-            .await.unwrap().text().await.unwrap()
-        ) {
-            Ok(data) => {
-                println!("{:?}", data)
-            }
-            Err(err) => {println!("Error to parse json from answer. Error msg = {}", err)}
-        }
+// pub async fn sign_up_post(raw_data: String) -> impl IntoResponse {
+//     let client = reqwest::Client::new();
+//     // Get answer about user from auth api
+//     match serde_json::from_str::<AuthAnswer>(&client.post("http://localhost:8081/api/auth/sign_up_auth")
+//             .body(raw_data)
+//             .send()
+//             .await.unwrap().text().await.unwrap()
+//         ) {
+//             Ok(data) => {
+//                 println!("{:?}", data)
+//             }
+//             Err(err) => {
+//                 println!("Error to parse json from answer. Error msg = {}", err)
+//             }
+//         }
 
-    "Ok"
-}
+//     "Ok"
+// }
 
 
 

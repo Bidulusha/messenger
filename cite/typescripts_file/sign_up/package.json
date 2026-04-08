@@ -1,0 +1,9 @@
+{
+  "dependencies": {
+    "esbuild": "^0.28.0",
+    "websocket-ts": "^2.3.0"
+  },
+  "scripts": {
+    "build": "esbuild index.ts --bundle --outfile=../../static/scripts/sign_up/sign_up_script.js --watch"
+  }
+}
