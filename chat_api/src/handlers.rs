@@ -46,10 +46,12 @@ use message_from_user::{
     MessageType
 };
 
+use shared_lib::database::ChatsInfo;
 // Project libraries
 use shared_lib::structures::answers::TokenCheckAnswer;
 use shared_lib::structures::answers::AuthAnswer;
 use shared_lib::structures::answers::AuthStatus;
+use shared_lib::database::ChatsUser;
 
 
 /*              Functions                */
@@ -134,8 +136,10 @@ async fn handle_socket(mut socket: WebSocket, who: SocketAddr, state: Arc<AppSta
                         let _ = sender.send(Message::text(UserMessage::auth_access_allowed())).await;
                         break;
                     }
+
                     // GET REQUESTS
                     match data.message_type{
+
                         MessageType::AUTH_CHECK => { // Check token
                             if let Ok(req) = serde_json::from_str::<AuthRequest>(&data.content) {
                                 let client = reqwest::Client::new();
@@ -152,8 +156,8 @@ async fn handle_socket(mut socket: WebSocket, who: SocketAddr, state: Arc<AppSta
                                             if data.status_code == AuthStatus::ACCESS_ALLOWED {
                                                 user.user_id = req.user_id;
                                                 user.authorized = true;
-                                                println!("here!");
                                                 let _ = sender.send(Message::text(UserMessage::auth_access_allowed())).await;
+                                                drop(data);
                                             }
                                             else {
                                                 let _ = sender.send(Message::text(UserMessage::auth_access_denied())).await;
@@ -170,8 +174,12 @@ async fn handle_socket(mut socket: WebSocket, who: SocketAddr, state: Arc<AppSta
                                 break;
                             }
                         }
-                        MessageType::GET_CHATS => { // Get chats
 
+                        MessageType::GET_CHATS => { // Get chats
+                            let chats = ChatsUser::select_all(&state.client, &user.user_id).await;
+                            let chats_info = ChatsInfo::get_chats(&state.client, &chats).await; 
+                            let _  = sender.send(Message::text(UserMessage::get_chats(chats_info))).await;
+                            drop(chats);
                         }
                         MessageType::OPEN_CHAT =>  {
 
@@ -180,7 +188,6 @@ async fn handle_socket(mut socket: WebSocket, who: SocketAddr, state: Arc<AppSta
 
                         }
                     }
-                    data;
                 }
                 Err(err) => { 
                     eprintln!("{}", err);

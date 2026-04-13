@@ -1,23 +1,50 @@
+:root {
+    --body-input__margin: 0.6rem;
+}
+
 .chat {
+    display: flex;
+    flex-direction: column;
+
     width: 100%;
+    height: 100vh;
 }
 
 .chat__header {
     display: flex;
     width: 100%;
+
+    overflow: hidden;
     border-bottom: 1px solid black;
 }
 
 .chat__body {
-    width: 100%;
-    height: 100%;
-
     display: flex;
     flex-direction: column;
 
-    justify-content: last baseline;
-    text-align: end;
+    justify-content: end;
+
+    height: 100%;
+    width: 100%;
+}
+
+.chat__body-text {
+    
 }
 
 .chat__body-input {
+    display: flex;
+    justify-content: center;
+
+    width: 100%;
+    margin: var(--body-input__margin);
+}
+
+.chat__body-input-button {
+    margin-left: var(--body-input__margin);
+}
+
+.chat__body-input-text{
+    height: 1rem;
+    width: 80%;
 }

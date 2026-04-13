@@ -8,6 +8,9 @@ use serde::{Deserialize, Serialize};
 // Project files
 use shared_lib::structures::answers::{AuthAnswer, AuthStatus};
 
+// Project libraries
+use shared_lib::database::{ChatsInfo};
+
 /*              Functions                */
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
 pub enum MessageType {
@@ -50,6 +53,13 @@ impl UserMessage {
         return serde_json::to_string(&UserMessage {
             message_type: MessageType::AUTH_CHECK,
             content: AuthStatus::ACCESS_DENIED.into()
+        }).unwrap()
+    }
+
+    pub fn get_chats(chats: Vec<ChatsInfo>)  -> String{
+        return serde_json::to_string(&UserMessage {
+            message_type: MessageType::GET_CHATS,
+            content: serde_json::to_string(&chats).unwrap()
         }).unwrap()
     }
 }

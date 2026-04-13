@@ -36,14 +36,22 @@ pub struct UsersInfo {
     pub password: String
 }
 
+// User chats 
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ChatsUser{
+    pub id: i32,
+    pub chat_id: i32,
+}
+
 // Chats info
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ChatsInfo{
-    pub id: i32,
-    pub avatar: String,
-    pub name: String,
-    pub members_id: Vec<i64>
+pub struct ChatsInfo {
+    id: i32, 
+    avatar: String,
+    name: String,
+    members_id: Vec<i32>
 }
+
 
 // Chat [id]
 #[derive(Debug, Clone, Serialize, Deserialize)]

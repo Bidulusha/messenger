@@ -1,8 +1,7 @@
 /*              Includes                 */
 // Crate
 use crate::database::{
-    UsersInfo,
-    ActiveSessions
+    ActiveSessions, Chat, ChatsInfo, ChatsUser, UsersInfo
 };
 
 // std
@@ -77,8 +76,8 @@ impl UsersInfo {
 
     /*          Add new user     */
     pub async fn add(client: &Arc<Client>, data: &UsersInfo) -> Result<(), Error> {
-        match client.query("insert into users_info(email, login, password, chats) \
-                values($1, $2, $3, $4)",
+        match client.query("insert into users_info(email, login, password) \
+                values($1, $2, $3)",
                 &[&data.email, &data.login, &data.password]
             ).await {
                 Ok(_) => {println!("Add new user!")}
@@ -123,9 +122,6 @@ impl ActiveSessions {
     }
 
     pub async fn add(client: &Arc<Client>, user_id: &i32, token: &String) -> Result<(), Error> {
-        println!("{}", format!("\
-            insert into active_sessions_user_{user_id} (token) \
-                values($1)"));
         match client.query(&format!("\
             insert into active_sessions_user_{user_id} (token) \
                 values($1)"), &[&token]).await {
@@ -133,5 +129,52 @@ impl ActiveSessions {
                 Err(err) => {println!("Cannot add new token! Error: {:?}", err)}
             }
             Ok(())
+    }
+}
+
+impl ChatsUser {
+    pub async fn create(client: &Arc<Client>, user_id: &i32) {
+        match client.query(&format!("\
+            create table if not exists public.chats_user_{user_id} (\
+                id integer NOT NULL GENERATED ALWAYS AS IDENTITY (INCREMENT 1 START 1 MINVALUE 1 MAXVALUE 2147483647 CACHE 1),\
+                chat_id integer NOT NULL references chats_info(id)\
+            );"), &[]).await {
+                Ok(_) => {println!("Create chats_user_{user_id} table!")}
+                Err(err) => {println!("Cannot create chats_user_{user_id} table! Error: {:?}", err)}
+            }
+    }
+
+    pub async fn select_all(client: &Arc<Client>, user_id: &i32) -> Vec<ChatsUser> {
+        match client.query(
+            &format!("select * from public.chats_user_{user_id}"),
+            &[]).await {
+                Ok(data) => {
+                    data.into_iter().map(Into::into).collect()
+                }
+                Err(err) => {
+                    eprint!("Cannot select * from public.chats_user_{user_id}! Error: {:?}", err);
+                    vec![]
+                }
+            }
+    }
+}
+
+impl ChatsInfo {
+    pub async fn get_chats(client: &Arc<Client>, chats: &Vec<ChatsUser>) -> Vec<ChatsInfo>{
+        let mut req = String::from("");
+        let _ = chats.into_iter().map(|chat| {req.push_str(&chat.chat_id.to_string());req.push(',');});
+        req.pop();
+        match client.query(&format!("\
+        select * from public.chats_info\
+        where id in ({req})"), &[] 
+        ).await {
+            Ok(data) => {
+                data.into_iter().map(Into::into).collect()
+            }
+            Err(err) => {
+                eprintln!("Cannot select * from chats_info! Error = {:?}", err);
+                vec![]
+            }
+        }
     }
 }

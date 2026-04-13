@@ -20,7 +20,7 @@ use crate::token;
 use headers::UserAgent;
 
 // Project libraries
-use shared_lib::{database::{ActiveSessions, UsersInfo}, structures::answers::TokenCheckAnswer};
+use shared_lib::{database::{ActiveSessions, UsersInfo, ChatsUser}, structures::answers::TokenCheckAnswer};
 use shared_lib::structures::answers::{AuthAnswer, AuthStatus};
 use shared_lib::structures::forms::{SignInAuthForm, SignUpAuthForm};
 use shared_lib::database::database_functions;
@@ -109,7 +109,10 @@ pub async fn sign_up_auth(
 
             // 3) Create table active_seesions_user_[id]
             let _ = ActiveSessions::create(&state.client, &user.id).await;
-            println!("Not here(");
+
+            // 3) Create table chats_user_[id]
+            let _ = ChatsUser::create(&state.client, &user.id).await;
+
             // 4) Create unique token for session and add to db
             let token = create_token_and_add_to_db(&state.client, &user, &user_agent.to_string()).await;
 

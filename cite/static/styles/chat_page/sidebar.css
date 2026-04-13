@@ -4,8 +4,24 @@ main {
 }
 
 .sidebar{
-    border: 1px solid black;
+    border-right: 1px solid black;
 
     width: 20%;
     height: 100vh;
+}
+
+.sidebar-element {
+    width: 100%;
+    
+    /*  Button legacy */
+    background: none;
+    border: none;
+
+    cursor: pointer;
+
+    font-size: 16pt;
+}
+
+.sidebar-element:hover{
+    background-color:#f0f0f0;
 }

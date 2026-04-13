@@ -12,9 +12,38 @@
   // ui_objects/sidebar.ts
   var SidebarUI = class {
     constructor() {
+      this.sidebarDiv = document.querySelector("#main_sidebar");
+    }
+    setupChats(chats_info) {
+      chats_info.forEach((chat, index) => {
+        this.addChat(chat);
+      });
+    }
+    addChat(chat) {
+      const chat_info_button = document.createElement("button");
+      chat_info_button.id = `chat_${chat.id}_info`;
+      chat_info_button.classList.add("chat__info");
+      chat_info_button.classList.add("sidebar-element");
+      const chat_avatar_div = document.createElement("div");
+      const chat_avatar_img = document.createElement("img");
+      chat_avatar_img.src = `/static/images/avatars/${chat.avatar}`;
+      chat_avatar_div.append(chat_avatar_img);
+      const chat_info_text = document.createElement("div");
+      chat_info_text.classList.add("chat_info__text");
+      const chat_info_name = document.createElement("div");
+      chat_info_name.classList.add("chat__info-name");
+      chat_info_name.classList.add("line-limit-length");
+      chat_info_name.innerText = chat.name;
+      chat_info_text.append(chat_info_name);
+      chat_info_button.append(chat_info_text);
+      this.sidebarDiv.prepend(chat_info_button);
     }
     show() {
     }
+  };
+
+  // objects/chat_info.ts
+  var ChatsInfo = class {
   };
 
   // ../node_modules/websocket-ts/dist/esm/src/backoff/constantbackoff.js
@@ -657,11 +686,13 @@
   // index.ts
   var token = localStorage.getItem("access_token");
   var wsManager = new WebsocketManager();
+  var sidebar = new SidebarUI();
   if (token != null) {
     wsManager.addEventListeners(
+      // On open
       () => {
         console.log("Open connection!");
-        const msg = new UserMessage(
+        const auth_msg = new UserMessage(
           "AUTH_CHECK" /* AUTH_CHECK */,
           JSON.stringify(
             new AuthRequest(
@@ -670,15 +701,23 @@
             )
           )
         );
-        wsManager.sendMessage(JSON.stringify(msg));
+        wsManager.sendMessage(JSON.stringify(auth_msg));
+        const get_chats_msg = new UserMessage(
+          "GET_CHATS" /* GET_CHATS */,
+          ""
+        );
+        wsManager.sendMessage(JSON.stringify(get_chats_msg));
       },
+      // On close 
       () => {
         console.log("Close connection!");
       },
+      // On message
       (i, ev) => {
         try {
           const ans = JSON.parse(ev.data);
           switch (ans["message_type"]) {
+            // Auth check
             case "AUTH_CHECK" /* AUTH_CHECK */: {
               if (ans["content"] == "ACCESS_DENIED") {
                 localStorage.removeItem("token");
@@ -689,15 +728,25 @@
               }
               break;
             }
+            // Get chats
+            case "GET_CHATS" /* GET_CHATS */: {
+              console.log(ans["content"]);
+              const chats = Object.assign(new ChatsInfo(), JSON.parse(ans["content"]));
+              console.log(chats);
+              sidebar.setupChats(chats);
+              break;
+            }
           }
         } catch (error) {
           console.log("Server message: ", ev.data);
         }
       }
     );
+    const create_new_chat_button = document.querySelector("#sidebar__create-chat");
+    create_new_chat_button?.addEventListener("click", (event) => {
+      console.log(event.currentTarget);
+    });
   } else {
     window.location.replace(SIGN_IN_URL);
   }
-  var sidebar = new SidebarUI();
-  sidebar.show();
 })();
