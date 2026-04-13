@@ -1,6 +1,6 @@
 /*              Includes                 */
 // Crate
-use crate::model::{
+use crate::database::{
     UsersInfo,
     ActiveSessions
 };
@@ -49,7 +49,7 @@ impl UsersInfo {
     /*          get user         */
     pub async fn get_by_login(client: &Arc<Client>, login: &String) -> Vec<UsersInfo> {
         match client
-            .query("select * from users_info where login = $1", &[login])
+            .query("select * from users_info where login = $1 or email = $1", &[login])
             .await {
                 Ok(data) => {
                     data.into_iter().map(Into::into).collect()
@@ -61,11 +61,25 @@ impl UsersInfo {
             }
     }
 
+    pub async fn get_by_user_id(client: &Arc<Client>, user_id: &i32) -> Vec<UsersInfo>{
+        match client
+            .query("select * from users_info where id = $1", &[user_id])
+            .await {
+                Ok(data) => {
+                    data.into_iter().map(Into::into).collect()
+                }
+                Err(err) => {
+                    eprintln!("Can't select all from users_info! Error message: {:?}", err);
+                    vec![]
+                }
+            }
+        }
+
     /*          Add new user     */
     pub async fn add(client: &Arc<Client>, data: &UsersInfo) -> Result<(), Error> {
         match client.query("insert into users_info(email, login, password, chats) \
                 values($1, $2, $3, $4)",
-                &[&data.email, &data.login, &data.password, &data.chats]
+                &[&data.email, &data.login, &data.password]
             ).await {
                 Ok(_) => {println!("Add new user!")}
                 Err(err) => {println!("Cannot add new user! Error: {:?}", err)}
@@ -87,6 +101,25 @@ impl ActiveSessions {
                 Err(err) => {println!("Cannot create new active_session_table! Error: {:?}", err)}
             }
             Ok(())
+    }
+
+    pub async fn check_token(client: &Arc<Client>, user_id: &i32, token: &String) -> bool {
+        match client
+            .query(&format!(
+                "select * from active_sessions_user_{user_id}"), 
+                &[])
+            .await {
+                Ok(data) => {
+                    for i in 0..data.len() {
+                        if data[i].get::<&str, &str>("token") == token { return true; }
+                    }
+                    return false;
+                }
+                Err(err) => {
+                    eprintln!("Can't find token! Error message: {:?}", err);
+                    false
+                }
+            }
     }
 
     pub async fn add(client: &Arc<Client>, user_id: &i32, token: &String) -> Result<(), Error> {

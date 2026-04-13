@@ -5,6 +5,7 @@ use crate::handlers;
 // Axum
 use axum::{
     routing::{get, any},
+    response::Redirect,
     Router
 };
 
@@ -16,7 +17,7 @@ use tower_http::services::ServeDir;
 pub fn create_router() -> Router {
     Router::new()
         // root
-        .route("/",     get(handlers::main_page))
+        .route("/",     get(|| async {Redirect::permanent("/chat")}))
         // chat
         .route("/chat", get(handlers::chat_page))
         // sign in

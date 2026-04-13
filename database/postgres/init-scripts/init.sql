@@ -40,8 +40,7 @@ create table if not exists public.users_info (
     id integer NOT NULL GENERATED ALWAYS AS IDENTITY (INCREMENT 1 START 1 MINVALUE 1 MAXVALUE 2147483647 CACHE 1),
     email varchar(64) NOT NULL,
     login varchar(32) NOT NULL,
-    password varchar(128) NOT NULL,
-    chats bigint[] NOT NULL
+    password varchar(128) NOT NULL
 );
 
 create table if not exists public.chats_info(

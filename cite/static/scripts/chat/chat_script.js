@@ -628,15 +628,29 @@
   // websocket_connection.ts
   var WebsocketManager = class {
     constructor() {
-      ws = new WebsocketBuilder(CHAT_WS_URL).withBuffer(new ArrayQueue()).withBackoff(new ConstantBackoff(1e3)).build();
+      this.ws = new WebsocketBuilder(CHAT_WS_URL).withBuffer(new ArrayQueue()).withBackoff(new ConstantBackoff(1e3)).build();
     }
     sendMessage(message) {
-      this.ws.send("message");
+      this.ws.send(message);
     }
     addEventListeners(open, close, message) {
       this.ws.addEventListener(WebsocketEvent.open, open);
       this.ws.addEventListener(WebsocketEvent.close, close);
       this.ws.addEventListener(WebsocketEvent.message, message);
+    }
+  };
+
+  // ws_messages/message.ts
+  var AuthRequest = class {
+    constructor(user_id, token2) {
+      this.user_id = user_id;
+      this.token = token2;
+    }
+  };
+  var UserMessage = class {
+    constructor(type, content) {
+      this.message_type = type;
+      this.content = content;
     }
   };
 
@@ -647,13 +661,38 @@
     wsManager.addEventListeners(
       () => {
         console.log("Open connection!");
-        wsManager.sendMessage("Halo wordl?");
+        const msg = new UserMessage(
+          "AUTH_CHECK" /* AUTH_CHECK */,
+          JSON.stringify(
+            new AuthRequest(
+              parseInt(localStorage.getItem("user_id")),
+              localStorage.getItem("access_token")
+            )
+          )
+        );
+        wsManager.sendMessage(JSON.stringify(msg));
       },
       () => {
         console.log("Close connection!");
       },
       (i, ev) => {
-        i.send("Halo?");
+        try {
+          const ans = JSON.parse(ev.data);
+          switch (ans["message_type"]) {
+            case "AUTH_CHECK" /* AUTH_CHECK */: {
+              if (ans["content"] == "ACCESS_DENIED") {
+                localStorage.removeItem("token");
+                localStorage.removeItem("user_id");
+                window.location.replace("/sign_in");
+              } else {
+                console.log("Access to user allowed!");
+              }
+              break;
+            }
+          }
+        } catch (error) {
+          console.log("Server message: ", ev.data);
+        }
       }
     );
   } else {

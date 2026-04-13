@@ -1,4 +1,8 @@
 /*              Includes                */
+// mod
+pub mod database_functions;
+pub mod struct_functions;
+
 // Std
 use std::hash::{Hash};
 
@@ -8,9 +12,8 @@ use chrono::{NaiveTime};
 // serde
 use serde::{Serialize, Deserialize};
 
-//postgres_types
+// postgres_types
 use postgres_types::{ToSql, FromSql};
-
 
 /*              Structures              */
 /*   SQL structures  */
@@ -30,8 +33,7 @@ pub struct UsersInfo {
     pub id: i32,
     pub email: String,
     pub login: String,
-    pub password: String,
-    pub chats: Vec<i64>,
+    pub password: String
 }
 
 // Chats info

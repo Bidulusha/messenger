@@ -2,11 +2,8 @@
 // Std
 use std::hash::{Hash};
 
-// Chrono
-use chrono::NaiveTime;
-
 // Project libraries
-use crate::model::UsersInfo;
+use crate::database::UsersInfo;
 
 
 #[derive(Hash)]

@@ -2,11 +2,9 @@
 //mods
 mod route;
 mod handlers;
-mod structures;
 
 //Project files
 use route::create_router;
-use structures::answers;
 
 /*               Main function             */
 #[tokio::main]

@@ -1,7 +1,4 @@
 /*              Includes                 */
-// Crate
-use crate::answers::{AuthAnswer, AuthStatus};
-
 // Askama
 use askama::Template;
 
@@ -39,14 +36,13 @@ where
 
 
 /*          Main page            */
-#[derive(Template)]
-#[template(path = "main_page/index.html")]
-struct MainPageTemplate {}
+// #[derive(Template)]
+// #[template(path = "main_page/index.html")]
+// struct MainPageTemplate {}
 
-pub async fn main_page() -> impl IntoResponse {
-    let template = MainPageTemplate {};
-    HtmlTemplate(template)
-}
+// pub async fn main_page() -> impl IntoResponse {
+//     let _ = axum::response::Redirect::permanent("/chat");
+// }
 
 
 /*          Auth pages           */
@@ -56,28 +52,11 @@ pub async fn main_page() -> impl IntoResponse {
 #[template(path = "sign_in_page/index.html")]
 struct SignInPageTemplate {}
 
-pub async fn sign_in_page() -> impl IntoResponse {
+pub async fn sign_in_page() -> impl IntoResponse{
     let template = SignInPageTemplate {};
     HtmlTemplate(template)
 }
 
-// // post
-// pub async fn sign_in_post(raw_data: String) -> &'static str {
-//     let client = reqwest::Client::new();
-//     // Get answer about user from auth api
-//     match serde_json::from_str::<AuthAnswer>(&client.post("http://localhost:8081/api/auth/sign_in_auth")
-//             .body(raw_data)
-//             .send()
-//             .await.unwrap().text().await.unwrap()
-//         ) {
-//             Ok(data) => {
-//                 println!("{:?}", data)
-//             }
-//             Err(err) => {println!("Error to parse json from answer. Error msg = {}", err)}
-//         }
-
-//     "Ok"
-// }
 
 /* Sign up */
 // get
@@ -89,27 +68,6 @@ pub async fn sign_up_page() -> impl IntoResponse {
     let template = SignUpPageTemplate {};
     HtmlTemplate(template)
 }
-
-//post
-// pub async fn sign_up_post(raw_data: String) -> impl IntoResponse {
-//     let client = reqwest::Client::new();
-//     // Get answer about user from auth api
-//     match serde_json::from_str::<AuthAnswer>(&client.post("http://localhost:8081/api/auth/sign_up_auth")
-//             .body(raw_data)
-//             .send()
-//             .await.unwrap().text().await.unwrap()
-//         ) {
-//             Ok(data) => {
-//                 println!("{:?}", data)
-//             }
-//             Err(err) => {
-//                 println!("Error to parse json from answer. Error msg = {}", err)
-//             }
-//         }
-
-//     "Ok"
-// }
-
 
 
 /*          Chat page            */

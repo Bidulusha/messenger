@@ -7,24 +7,20 @@ import {
     WebsocketBuilder,
     WebsocketEvent,
 } from "websocket-ts";
-import { Message } from "./ws_messages/message";
-
-
-// import {};
 
 export class WebsocketManager {
 
     private ws: Websocket;
 
     constructor () {
-        ws = new WebsocketBuilder(CHAT_WS_URL)
+        this.ws = new WebsocketBuilder(CHAT_WS_URL)
             .withBuffer(new ArrayQueue())
             .withBackoff(new ConstantBackoff(1000))
             .build()
     }
 
     sendMessage(message: string){
-        this.ws.send("message");
+        this.ws.send(message);
     }
 
     addEventListeners(

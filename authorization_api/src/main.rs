@@ -2,9 +2,6 @@
 // mod
 mod route;
 mod handlers;
-mod model;
-mod structures;
-mod database;
 mod token;
 
 // std

@@ -1,7 +1,4 @@
 /*              Includes                 */
-// Crate
-use crate::{model, structures};
-
 // Std
 use std::hash::{DefaultHasher, Hash, Hasher};
 use std::sync::Arc;
@@ -14,9 +11,9 @@ use argon2::{
 // Tokio postgres
 use tokio_postgres::Client;
 
-// Project files
-use model::{UsersInfo, ActiveSessions};
-use structures::session::Session;
+// Project libraries
+use shared_lib::database::{UsersInfo, ActiveSessions};
+use shared_lib::structures::session::Session;
 
 
 /*                  Enums                */
@@ -52,19 +49,4 @@ pub async fn create_token_and_add_to_db(client: &Arc<Client>, user: &UsersInfo, 
     let _ = ActiveSessions::add(&client, &user.id, &token).await;
     
     token
-}
-
-
-// Validate key
-pub fn validate_hash_key<T: Hash>(session: &Session, key: String) -> ValidationStatus{
-    match Argon2::default().verify_password(
-        calculate_hash(&session).to_string().as_bytes(), 
-        &PasswordHash::new(&key).unwrap()){
-            Ok(_) => {
-                ValidationStatus::OK
-            }
-            Err(_) => {
-                ValidationStatus::ERR
-            }
-        }
 }

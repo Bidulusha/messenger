@@ -2,8 +2,6 @@
 // mod
 mod route;
 mod handlers;
-mod model;
-mod database;
 mod message_from_user;
 
 // std

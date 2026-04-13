@@ -5,16 +5,45 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link href="/static/styles/chat_page/style.css" rel="stylesheet">
     <link href="/static/styles/chat_page/chat.css" rel="stylesheet">
+    <link href="/static/styles/chat_page/chat_info.css" rel="stylesheet">
     <link href="/static/styles/chat_page/sidebar.css" rel="stylesheet">
+    <link href="/static/styles/base_style.css" rel="stylesheet">
     <title>Мессенджер</title>
 </head>
 <body>
     <main>
+        <!--    Sidebar     -->
         <div id="main_sidebar" class="sidebar">
-            <p>placeholder</p>
+            <div id="chat_[id]_info" class="chat__info">
+                <div class="chat__avatar">
+                    <img src="/static/images/avatars/ph.png">
+                </div>
+                <div class="chat_info__text">
+                    <div class="chat__info-name line-limit-length">Андреев Вадим Антонович</div>
+                    <div class="chat__info-last-message line-limit-length"></div>
+                </div>
+            </div>
         </div>
-        <div id="main_div" class="main">
-            <p>placeholder</p>
+        <!--    Chat body   -->
+        <div id="chat_[id]_body" class="chat">
+            <!--      Header      -->
+            <div class="chat__header">
+                <div class="chat__avatar">
+                    <img src="/static/images/avatars/ph.png">
+                </div>
+                <div class="chat_info__text">
+                    <div class="chat_info-name">Андреев Вадим Антонович</div>
+                </div>
+            </div>
+            <div class="chat__body">
+                <div class="chat__body-text">
+                    
+                </div>
+                <div class="chat__body-input">
+                    <input class="chat__body-input-text">
+                    <input type="button" class="chat__body-input-send-text" value="Отправить">
+                </div>
+            </div>
         </div>
     </main>
 

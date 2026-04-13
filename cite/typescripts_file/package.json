@@ -1,0 +1,6 @@
+{
+  "dependencies": {
+    "esbuild": "^0.28.0",
+    "websocket-ts": "^2.3.0"
+  }
+}

@@ -4,6 +4,7 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
+shared-lib = { path = "../shared-lib" }
 argon2 = { version = "0.5.3", features = ["std"] }
 axum = { version = "0.8.8", features = ["macros", "ws"] }
 axum-extra = { version = "0.12.5", features = ["typed-header"] }
@@ -19,3 +20,4 @@ serde_json = "1.0.149"
 tokio = { version = "1.51.0", features = ["full"] }
 tokio-postgres = { version = "0.7.17", features = ["array-impls", "js", "with-chrono-0_4"] }
 tower-http = { version = "0.6.8", features = ["cors"] }
+reqwest = "0.13.2"

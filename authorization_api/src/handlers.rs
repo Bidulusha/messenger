@@ -11,23 +11,24 @@ use axum::{
 use axum_extra::TypedHeader;
 
 // Crate
-use crate::AppState;
-use crate::structures::forms::{AuthForm};
-use crate::structures::answers::{AuthAnswer, AuthStatus};
-use crate::structures::session::{Session};
-use crate::model::{ActiveSessions, UsersInfo};
+use crate::{AppState};
+
 use crate::token;
-use crate::database::database_functions;
+// use crate::database::database_functions;
 
 // Headers
 use headers::UserAgent;
 
-// Serde html form
-use serde_html_form;
+// Project libraries
+use shared_lib::{database::{ActiveSessions, UsersInfo}, structures::answers::TokenCheckAnswer};
+use shared_lib::structures::answers::{AuthAnswer, AuthStatus};
+use shared_lib::structures::forms::{SignInAuthForm, SignUpAuthForm};
+use shared_lib::database::database_functions;
 
 // Project files
-use token::{ValidationStatus, create_hash_key, validate_hash_key, create_token_and_add_to_db};
+use token::{create_token_and_add_to_db};
 use database_functions::select_max_user_id;
+
 
 /*              Functions                */
 // Sing in checker
@@ -36,7 +37,7 @@ pub async fn sign_in_auth(
     State(state): State<Arc<AppState>>, 
     raw_data: String
 ) -> Json<AuthAnswer> {
-    match serde_html_form::from_str::<AuthForm>(&raw_data) {
+    match serde_json::from_str::<SignInAuthForm>(&raw_data) {
         Ok(data) => {
             // 1) User exists check
             let users = UsersInfo::get_by_login(&state.client, &data.login).await;
@@ -64,7 +65,7 @@ pub async fn sign_in_auth(
 
             // 4) Answer to user
             return Json(AuthAnswer {
-                status_code: AuthStatus::ACCES_ALLOWED,
+                status_code: AuthStatus::ACCESS_ALLOWED,
                 user_id: users[0].id,
                 token: token
             });
@@ -86,8 +87,7 @@ pub async fn sign_up_auth(
     State(state): State<Arc<AppState>>, 
     raw_data: String
 ) -> Json<AuthAnswer> {
-    match serde_json::from_str::<AuthForm>(&raw_data){
-        
+    match serde_json::from_str::<SignUpAuthForm>(&raw_data){
         Ok(data) => {
             let max_id = select_max_user_id(&state.client).await;
             let mut user: UsersInfo = data.into();
@@ -99,6 +99,7 @@ pub async fn sign_up_auth(
                     status_code: AuthStatus::USER_ALREADY_EXISTS,
                     user_id: -1,
                     token: String::from("")
+
                 });
             }
 
@@ -126,6 +127,42 @@ pub async fn sign_up_auth(
                 status_code: AuthStatus::ERR,
                 user_id: -1,
                 token: String::from("")
+            })
+        }
+    }
+}
+
+//Check token
+pub async fn check_token(
+    State(state) : State<Arc<AppState>>,
+    raw_data: String
+) -> Json<AuthAnswer>
+{
+    match serde_json::from_str::<TokenCheckAnswer>(&raw_data){
+        Ok(data) => {
+            let token_correct = ActiveSessions::check_token(&state.client, &data.user_id, &data.token).await;
+            if token_correct{
+                Json(AuthAnswer { 
+                    status_code: AuthStatus::ACCESS_ALLOWED, 
+                    user_id: -1, 
+                    token: "".into()
+                })
+            }
+            else {
+                Json(AuthAnswer { 
+                    status_code: AuthStatus::ACCESS_DENIED, 
+                    user_id: -1, 
+                    token: "".into()
+                })
+            }
+            
+        }
+        Err(err) => {
+            eprintln!("Error deserialize auth answerd! Error: {:?}", err);
+            Json(AuthAnswer {
+                status_code: AuthStatus::ERR,
+                user_id: -1,
+                token: "".into()
             })
         }
     }

@@ -1,17 +1,26 @@
 export enum MessageType {
-    AUTH_CHECK,
-    GET_CHATS,
-    OPEN_CHAT,
-    SEND_MESSAGE,
+    AUTH_CHECK = "AUTH_CHECK",
+    GET_CHATS = "GET_CHAT",
+    OPEN_CHAT = "OPEN_CHAT",
+    SEND_MESSAGE = "SEND_MESSAGE",
 }
 
-export class Content {
-    what: String;
-    to: String;
+export class AuthRequest {
+    user_id: Number;
+    token: String;
+
+    constructor(user_id: Number, token: String) {
+        this.user_id = user_id;
+        this.token = token;
+    }
+}
+
+export class UserMessage {
+    message_type: MessageType;
     content: String;
-}
 
-export class Message {
-    type: MessageType;
-    content: Content;
+    constructor (type: MessageType, content: String) {
+        this.message_type = type;
+        this.content = content;
+    }
 }

@@ -1,6 +1,7 @@
 /*              Includes                 */
 // Crate 
 use crate::AppState;
+use crate::message_from_user;
 
 // Std
 use std::{
@@ -11,6 +12,7 @@ use std::{
 
 //Axum
 use axum::{
+    Json,
     body::Bytes,
     response::{
         IntoResponse
@@ -36,6 +38,19 @@ use axum_extra::{
 //futures util
 use futures_util::{sink::SinkExt, stream::StreamExt};
 
+// Project files
+use message_from_user::{
+    User, 
+    UserMessage, 
+    AuthRequest,
+    MessageType
+};
+
+// Project libraries
+use shared_lib::structures::answers::TokenCheckAnswer;
+use shared_lib::structures::answers::AuthAnswer;
+use shared_lib::structures::answers::AuthStatus;
+
 
 /*              Functions                */
 /* Websocket connection for admin page */
@@ -45,7 +60,6 @@ pub async fn admin_page_ws_handler(
     ConnectInfo(addr): ConnectInfo<SocketAddr>,
     State(state): State<Arc<AppState>>
 ) -> impl IntoResponse {
-    println!("Here!");
     let user_agent = if let Some(TypedHeader(user_agent)) = user_agent {
         user_agent.to_string()
     } else {
@@ -96,18 +110,91 @@ async fn handle_socket(mut socket: WebSocket, who: SocketAddr, state: Arc<AppSta
         return;
     }
 
+    // subscribe broadcast
     let mut rx2 = state.tx.subscribe();
+
+    // Create user
+    let mut user = User {
+        user_id: -1,
+        authorized: false,
+        connection_info: who
+    };
+
+    
 
     //Spawn while close answering
     let mut recv_task = tokio::spawn(async move{
         while let Some(Ok(msg)) = receiver.next().await {
-            if let Ok(data) = rx2.recv().await {
-                println!("Get!");
-                let _ = sender.send(Message::text(data)).await;
+            // Get data from ws
+            println!("{}", msg.to_text().unwrap());
+            match serde_json::from_str::<UserMessage>(msg.to_text().unwrap()) {
+                Ok(data) => {
+                    // NOT AUTHORIZED USER
+                    if user.authorized != true && data.message_type != MessageType::AUTH_CHECK {
+                        let _ = sender.send(Message::text(UserMessage::auth_access_allowed())).await;
+                        break;
+                    }
+                    // GET REQUESTS
+                    match data.message_type{
+                        MessageType::AUTH_CHECK => { // Check token
+                            if let Ok(req) = serde_json::from_str::<AuthRequest>(&data.content) {
+                                let client = reqwest::Client::new();
+                                match serde_json::from_str::<AuthAnswer>(
+                                    &client.post("http://localhost:8081/api/auth/check_token")
+                                    .body(serde_json::to_string(
+                                        &TokenCheckAnswer{
+                                            user_id: req.user_id, 
+                                            token: req.token
+                                        }).unwrap())
+                                    .send()
+                                    .await.unwrap().text().await.unwrap()) {
+                                        Ok(data) => {
+                                            if data.status_code == AuthStatus::ACCESS_ALLOWED {
+                                                user.user_id = req.user_id;
+                                                user.authorized = true;
+                                                println!("here!");
+                                                let _ = sender.send(Message::text(UserMessage::auth_access_allowed())).await;
+                                            }
+                                            else {
+                                                let _ = sender.send(Message::text(UserMessage::auth_access_denied())).await;
+                                                break;
+                                            }
+                                        }
+                                        Err(_) => {
+                                            let _ = sender.send(Message::text(UserMessage::auth_access_denied())).await;
+                                            break;
+                                        }
+                                    }
+                            } else {
+                                let _ = sender.send(Message::text(UserMessage::auth_access_denied())).await;
+                                break;
+                            }
+                        }
+                        MessageType::GET_CHATS => { // Get chats
+
+                        }
+                        MessageType::OPEN_CHAT =>  {
+
+                        }
+                        MessageType::SEND_MESSAGE => {
+
+                        }
+                    }
+                    data;
+                }
+                Err(err) => { 
+                    eprintln!("{}", err);
+                }
             }
+
             if process_message(msg, who).is_break() {
                 break;
             }
+            
+            // if let Ok(data) = rx2.recv().await { // or use tokio spawn module
+            //     println!("Get!");
+            //     let _ = sender.send(Message::text(data)).await;
+            // }
         }
     });
 

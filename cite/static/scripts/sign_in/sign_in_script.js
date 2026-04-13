@@ -15,25 +15,24 @@
     constructor() {
       // html elements
       this.formElement = document.querySelector("form");
-      this.emailElement = document.querySelector("#form__email");
       this.loginElement = document.querySelector("#form__login");
       this.passwordElement = document.querySelector("#form__password");
-      this.secondPasswordElement = document.querySelector("#form__second_password");
     }
     // get elements
     get element() {
       return this.formElement;
     }
+    get passwordField() {
+      return this.passwordElement;
+    }
     // Update
     update() {
-      this.email = this.emailElement.value;
       this.login = this.loginElement.value;
       this.password = this.passwordElement.value;
     }
     // get 
     getObject() {
       return {
-        email: this.email,
         login: this.login,
         password: this.password
       };
@@ -41,14 +40,15 @@
   };
 
   // index.ts
-  var signUpButton = document.querySelector(".button-sign-up button");
+  var signUpButton = document.querySelector(".button-sign-in button");
   var form = new Form();
   form.element.addEventListener("submit", async (e) => {
     e.preventDefault();
     try {
       form.update();
+      console.log(JSON.stringify(form.getObject()));
       const respons = await fetch(
-        AUTH_API_URL + "/api/auth/sign_up_auth",
+        AUTH_API_URL + "/api/auth/sign_in_auth",
         {
           method: "POST",
           headers: {
@@ -62,14 +62,24 @@
       }
       const result = await respons.json();
       switch (result["status_code"]) {
-        case "OK": {
+        case "ACCESS_ALLOWED": {
           localStorage.setItem("user_id", result["user_id"]);
           localStorage.setItem("access_token", result["token"]);
+          alert(result["user_id"]);
           window.location.replace(CHAT_URL);
           break;
         }
-        case "USER_ALREADY_EXISTS": {
-          alert("\u0422\u0430\u043A\u043E\u0439 \u043F\u043E\u043B\u044C\u0437\u043E\u0432\u0430\u0442\u0435\u043B\u044C \u0443\u0436\u0435 \u0441\u0443\u0449\u0435\u0441\u0442\u0432\u0443\u0435\u0442!");
+        case "USER_NOT_FOUND": {
+          alert("\u041F\u043E\u043B\u044C\u0437\u043E\u0432\u0430\u0442\u0435\u043B\u044C \u043D\u0435 \u043D\u0430\u0439\u0434\u0435\u043D!");
+          break;
+        }
+        case "SIGNIN_DATA_ERROR": {
+          alert("\u041D\u0435 \u043F\u0440\u0430\u0432\u0438\u043B\u044C\u043D\u044B\u0439 \u043B\u043E\u0433\u0438\u043D \u0438\u043B\u0438 \u043F\u0430\u0440\u043E\u043B\u044C!");
+          form.passwordField.value = "";
+          break;
+        }
+        case "ERR": {
+          alert("\u041D\u0435\u043F\u0440\u0435\u0434\u0432\u0438\u0434\u0435\u043D\u043D\u0430\u044F \u043E\u0448\u0438\u0431\u043A\u0430!");
           break;
         }
       }

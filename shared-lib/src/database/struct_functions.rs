@@ -1,6 +1,7 @@
 /*              Includes                 */
+
 // crates
-use crate::model::{
+use crate::database::{
     UsersInfo
 };
 
@@ -16,8 +17,7 @@ impl From<Row> for UsersInfo {
             id: item.get("id"),
             email: item.get("email"),
             login: item.get("login"),
-            password: item.get("password"),
-            chats: item.get("chats"),
+            password: item.get("password")
         }
     }
 }
