@@ -683,12 +683,35 @@
     }
   };
 
+  // ui_objects/pop_up/start_new_chat.ts
+  var PopUpNewChatUI = class {
+    constructor() {
+      this.popUpElement = document.querySelector("#pop_up_start_new_chat");
+      // closeButton: HTMLButtonElement = this.popUpElement.querySelector(".pop_up__window_manager_close_button")!;
+      this.findUser = this.popUpElement.querySelector(".pop_up__form-find_button");
+      this.backgroundElement = this.popUpElement.querySelector(".pop_up__background");
+      this.inputElement = this.popUpElement.querySelector(".pop_up__form-login_input");
+      this.formContainerElement = this.popUpElement.querySelector(".pop_up__form-container");
+      this.backgroundElement.addEventListener("click", () => this.close());
+      this.findUser.addEventListener("click", () => {
+        alert(this.inputElement.value);
+      });
+    }
+    show() {
+      this.popUpElement.style.display = "flex";
+    }
+    close() {
+      this.popUpElement.style.display = "none";
+    }
+  };
+
   // index.ts
   var token = localStorage.getItem("access_token");
-  var wsManager = new WebsocketManager();
+  var ws_manager = new WebsocketManager();
   var sidebar = new SidebarUI();
+  var pop_up_new_chat = new PopUpNewChatUI();
   if (token != null) {
-    wsManager.addEventListeners(
+    ws_manager.addEventListeners(
       // On open
       () => {
         console.log("Open connection!");
@@ -701,12 +724,12 @@
             )
           )
         );
-        wsManager.sendMessage(JSON.stringify(auth_msg));
+        ws_manager.sendMessage(JSON.stringify(auth_msg));
         const get_chats_msg = new UserMessage(
           "GET_CHATS" /* GET_CHATS */,
           ""
         );
-        wsManager.sendMessage(JSON.stringify(get_chats_msg));
+        ws_manager.sendMessage(JSON.stringify(get_chats_msg));
       },
       // On close 
       () => {
@@ -744,7 +767,7 @@
     );
     const create_new_chat_button = document.querySelector("#sidebar__create-chat");
     create_new_chat_button?.addEventListener("click", (event) => {
-      console.log(event.currentTarget);
+      pop_up_new_chat.show();
     });
   } else {
     window.location.replace(SIGN_IN_URL);

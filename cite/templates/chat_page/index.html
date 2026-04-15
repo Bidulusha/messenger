@@ -3,15 +3,31 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link href="/static/styles/chat_page/style.css" rel="stylesheet">
+    <link href="/static/styles/base_style.css" rel="stylesheet">
     <link href="/static/styles/chat_page/chat.css" rel="stylesheet">
+    <link href="/static/styles/chat_page/style.css" rel="stylesheet">
+    <link href="/static/styles/chat_page/pop_up.css" rel="stylesheet">
     <link href="/static/styles/chat_page/chat_info.css" rel="stylesheet">
     <link href="/static/styles/chat_page/sidebar.css" rel="stylesheet">
-    <link href="/static/styles/base_style.css" rel="stylesheet">
     <title>Мессенджер</title>
 </head>
 <body>
     <main>
+        <!-- pop up start new chat -->
+        <div id="pop_up_start_new_chat" class="pop_up">
+            <div class = "pop_up__background"></div>
+            <div class="pop_up__form-container">
+                <div class="pop_up__form">
+                    <h1>Найти пользователя</h1>
+                    <input class="pop_up__form-login_input" placeholder="Логин пользователя">
+                    <button class="pop_up__form-find_button">Найти</button>
+                </div>
+                <!-- <div class="pop_up__window_manager">
+                    <button class="pop_up__window_manager_close_button">x</button>
+                </div> -->
+            </div>
+        </div>
+
         <!--    Sidebar     -->
         <div id="main_sidebar" class="sidebar">
             <button id="sidebar__create-chat" class="sidebar__create-chat sidebar-element">

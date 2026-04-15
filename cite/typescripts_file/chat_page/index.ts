@@ -4,17 +4,18 @@ import { SidebarUI } from "./ui_objects/sidebar";
 import { ChatsInfo } from "./objects/chat_info";
 import { WebsocketManager } from "./websocket_connection";
 import { AuthRequest, MessageType, UserMessage } from "./ws_messages/message";
+import { PopUpNewChatUI } from "./ui_objects/pop_up/start_new_chat";
 
 const token: string | null = localStorage.getItem("access_token");
-const wsManager = new WebsocketManager();
+const ws_manager = new WebsocketManager();
 
 
 let sidebar: SidebarUI = new SidebarUI();
-
+let pop_up_new_chat: PopUpNewChatUI = new PopUpNewChatUI();
 
 /*          INITIALIZIND         */
 if (token != null) {
-    wsManager.addEventListeners(
+    ws_manager.addEventListeners(
 
         // On open
         () => {
@@ -29,7 +30,7 @@ if (token != null) {
                     )
                 )
             );
-            wsManager.sendMessage(JSON.stringify(auth_msg));
+            ws_manager.sendMessage(JSON.stringify(auth_msg));
 
             /*      Get chats          */
             const get_chats_msg = new UserMessage(
@@ -37,7 +38,7 @@ if (token != null) {
                 ""
             );
 
-            wsManager.sendMessage(JSON.stringify(get_chats_msg));
+            ws_manager.sendMessage(JSON.stringify(get_chats_msg));
         },
 
         // On close 
@@ -84,7 +85,7 @@ if (token != null) {
     // Add listener to create new chat button
     const create_new_chat_button = document.querySelector("#sidebar__create-chat");
     create_new_chat_button?.addEventListener("click", (event) => {
-        console.log(event.currentTarget);
+        pop_up_new_chat.show();
     });
 }
 else {
