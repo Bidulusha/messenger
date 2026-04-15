@@ -6,19 +6,23 @@ use core::net::SocketAddr;
 use serde::{Deserialize, Serialize};
 
 // Project files
-use shared_lib::structures::answers::{AuthAnswer, AuthStatus};
+use shared_lib::structures::answers::{AuthAnswer, AuthStatus, UserStatus, UserShortInfo};
 
 // Project libraries
-use shared_lib::database::{ChatsInfo};
+use shared_lib::database::{ChatsInfo, ChatsUserWithInfo, UsersInfo};
 
 /*              Functions                */
+#[allow(non_camel_case_types)]
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
 pub enum MessageType {
     AUTH_CHECK,
     GET_CHATS,
+    START_CHAT,
     OPEN_CHAT,
     SEND_MESSAGE,
 }
+
+
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct User {
@@ -56,10 +60,29 @@ impl UserMessage {
         }).unwrap()
     }
 
-    pub fn get_chats(chats: Vec<ChatsInfo>)  -> String{
+    pub fn get_chats(chats: &Vec<ChatsUserWithInfo>)  -> String{
         return serde_json::to_string(&UserMessage {
             message_type: MessageType::GET_CHATS,
             content: serde_json::to_string(&chats).unwrap()
+        }).unwrap()
+    }
+
+    pub fn start_chat(user_info: &UsersInfo) -> String{
+        return serde_json::to_string(&UserMessage {
+            message_type: MessageType::START_CHAT,
+            content: serde_json::to_string(&UserShortInfo{
+                id: user_info.id,
+                login: user_info.login.clone(),
+                avatar: user_info.avatar.clone()
+            }).unwrap()
+        }).unwrap()
+    }
+
+    /*              USER NOT FOUND           */
+    pub fn user_not_found() -> String {
+        return serde_json::to_string(&UserMessage {
+            message_type: MessageType::START_CHAT,
+            content: UserStatus::USER_NOT_FOUND.into()
         }).unwrap()
     }
 }

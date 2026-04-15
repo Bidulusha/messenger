@@ -28,10 +28,6 @@
     width: 100%;
 }
 
-.chat__body-text {
-    
-}
-
 .chat__body-input {
     display: flex;
     justify-content: center;
@@ -40,11 +36,31 @@
     margin: var(--body-input__margin);
 }
 
-.chat__body-input-button {
+.chat__body-input__button {
     margin-left: var(--body-input__margin);
 }
 
-.chat__body-input-text{
+.chat__body-input__text{
     height: 1rem;
     width: 80%;
+}
+
+.chat__body-text {
+    display: flex;
+    flex-direction: column;
+
+    justify-content: center;
+    align-items: center;
+}
+
+.chat__body-text__message-container {
+    width: 80%;
+}
+
+.chat__body-text__sended_message {
+    text-align: right;
+}
+
+.chat__body-text__recived_message {
+    text-align: right;
 }

@@ -5,6 +5,7 @@ use serde::{Serialize, Deserialize};
 /*              Structures           */
 /*      Auth Answering      */
 // Status enum
+#[allow(non_camel_case_types)]
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub enum AuthStatus {
     OK,
@@ -15,6 +16,7 @@ pub enum AuthStatus {
     ACCESS_ALLOWED,
     ACCESS_DENIED,
 }
+
 
 // Auth answer
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -30,6 +32,26 @@ pub struct TokenCheckAnswer {
     pub user_id: i32,
     pub token: String
 }
+
+/*                  WS ANSWERS                   */
+
+// User short info for sending
+#[derive(Debug, Clone, Serialize, Deserialize, Hash)]
+pub struct UserShortInfo {
+    pub id: i32,
+    pub login: String,
+    pub avatar: String,
+}
+
+// User status for find
+#[allow(non_camel_case_types)]
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
+pub enum UserStatus {
+    USER_NOT_FOUND,
+}
+
+
+
 
 impl From<AuthStatus> for String {
     fn from(value: AuthStatus) -> Self {
@@ -53,6 +75,16 @@ impl From<AuthStatus> for String {
                 "USER_ALREADY_EXISTS".into()
             }
             AuthStatus::USER_NOT_FOUND => {
+                "USER_NOT_FOUND".into()
+            }
+        }
+    }
+}
+
+impl From<UserStatus> for String {
+    fn from(value: UserStatus) -> Self{
+        match value {
+            UserStatus::USER_NOT_FOUND => {
                 "USER_NOT_FOUND".into()
             }
         }

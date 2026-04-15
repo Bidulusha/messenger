@@ -37,16 +37,17 @@ $$;
 
 -- Создаем таблицы
 create table if not exists public.users_info (
-    id integer NOT NULL GENERATED ALWAYS AS IDENTITY (INCREMENT 1 START 1 MINVALUE 1 MAXVALUE 2147483647 CACHE 1),
+    id integer NOT NULL GENERATED ALWAYS AS IDENTITY (INCREMENT 1 START 1 MINVALUE 1 MAXVALUE 2147483647 CACHE 1) primary key,
     email varchar(64) NOT NULL,
     login varchar(32) NOT NULL,
-    password varchar(128) NOT NULL
+    password varchar(128) NOT NULL,
+    avatar text NOT NULL
 );
 
 create table if not exists public.chats_info(
     id integer NOT NULL GENERATED ALWAYS AS IDENTITY (INCREMENT 1 START 1 MINVALUE 1 MAXVALUE 2147483647 CACHE 1) primary key,
     avatar text NOT NULL,
-    name varchar(128) NOT NULL,
+    chat_name varchar(128) NOT NULL,
     members_id bigint[] NOT NULL
 );
 

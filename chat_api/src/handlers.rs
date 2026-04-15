@@ -10,6 +10,9 @@ use std::{
     ops::ControlFlow
 };
 
+// Colorized
+use colored::Colorize;
+
 //Axum
 use axum::{
     Json,
@@ -46,12 +49,14 @@ use message_from_user::{
     MessageType
 };
 
+use shared_lib::database::ChatMessage;
 use shared_lib::database::ChatsInfo;
+use shared_lib::database::UsersInfo;
 // Project libraries
 use shared_lib::structures::answers::TokenCheckAnswer;
 use shared_lib::structures::answers::AuthAnswer;
 use shared_lib::structures::answers::AuthStatus;
-use shared_lib::database::ChatsUser;
+use shared_lib::database::{ChatsUser};
 
 
 /*              Functions                */
@@ -176,18 +181,32 @@ async fn handle_socket(mut socket: WebSocket, who: SocketAddr, state: Arc<AppSta
                         }
 
                         MessageType::GET_CHATS => { // Get chats
-                            let chats = ChatsUser::select_all(&state.client, &user.user_id).await;
-                            let chats_info = ChatsInfo::get_chats(&state.client, &chats).await; 
-                            let _  = sender.send(Message::text(UserMessage::get_chats(chats_info))).await;
+                            let chats = ChatsUser::select_all_join_chat_info(&state.client, &user.user_id).await;
+                            let _ = sender.send(Message::text(UserMessage::get_chats(&chats))).await;
                             drop(chats);
+                        }
+                        MessageType::START_CHAT => {
+                            let found_users = UsersInfo::get_by_login(&state.client, &data.content).await;
+                            if found_users.len() > 0 {
+                                let _ = sender.send(Message::text(UserMessage::start_chat(&found_users[0]))).await;                                
+                            }
+                            else {
+                                let _ = sender.send(Message::text(UserMessage::user_not_found())).await;
+                            }
+                            drop(found_users);
                         }
                         MessageType::OPEN_CHAT =>  {
 
                         }
                         MessageType::SEND_MESSAGE => {
-
+                            match serde_json::from_str::<ChatMessage>(&data.content) {
+                                Ok(data) => {}
+                                Err(err) => {println!("{}", format!("Error getting chat message! Error {:?}", err).red())}
+                            }
                         }
                     }
+
+                    drop(data);
                 }
                 Err(err) => { 
                     eprintln!("{}", err);

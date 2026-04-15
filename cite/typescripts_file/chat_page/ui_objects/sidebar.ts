@@ -41,7 +41,7 @@ export class SidebarUI implements ObjectUI {
         const chat_info_name = document.createElement("div");
         chat_info_name.classList.add('chat__info-name')
         chat_info_name.classList.add("line-limit-length");
-        chat_info_name.innerText = chat.name;
+        chat_info_name.innerText = chat.chat_name;
         chat_info_text.append(chat_info_name);
 
         chat_info_button.append(chat_info_text);

@@ -1,3 +1,5 @@
+import { WebsocketManager } from "../../websocket_connection";
+import { UserMessage, MessageType } from "../../ws_messages/message";
 import { PopUpUI } from "./pop_up_interface";
 
 export class PopUpNewChatUI implements PopUpUI {
@@ -8,16 +10,17 @@ export class PopUpNewChatUI implements PopUpUI {
     inputElement: HTMLInputElement = this.popUpElement.querySelector(".pop_up__form-login_input")!;
     formContainerElement: HTMLElement = this.popUpElement.querySelector(".pop_up__form-container")!;
 
-    constructor() { 
+    constructor(ws_manager: WebsocketManager) { 
         this.backgroundElement.addEventListener("click", () => this.close());
-        // this.closeButton.addEventListener("click", () => this.close());
+
+        // send message
         this.findUser.addEventListener("click", () => {
-            alert(this.inputElement.value);
-            });
+            ws_manager.startChatMessage(this.inputElement.value);
+        });
     }
 
     show() {
-        this.popUpElement.style.display = "flex"
+        this.popUpElement.style.display = "flex";
     }
     
     close() {

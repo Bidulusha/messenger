@@ -21,3 +21,5 @@ tokio = { version = "1.51.0", features = ["full"] }
 tokio-postgres = { version = "0.7.17", features = ["array-impls", "js", "with-chrono-0_4"] }
 tower-http = { version = "0.6.8", features = ["cors"] }
 reqwest = "0.13.2"
+colorized = "1.0.0"
+colored = "3.1.1"

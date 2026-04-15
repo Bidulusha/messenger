@@ -31,7 +31,8 @@ impl From<SignUpAuthForm> for UsersInfo {
                 id: -1,
                 email: data.email,
                 login: data.login,
-                password: data.password
+                password: data.password,
+                avatar: "ph.png".into()
             }
     }
 }
@@ -42,7 +43,8 @@ impl From<SignInAuthForm> for UsersInfo {
             id: -1,
             email: "".into(), 
             login: data.login, 
-            password: data.password
+            password: data.password,
+            avatar: "ph.png".into()
         }
     }
 }

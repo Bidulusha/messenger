@@ -1,44 +1,34 @@
 import { Websocket } from "websocket-ts";
 import { SIGN_IN_URL } from "../constants";
 import { SidebarUI } from "./ui_objects/sidebar";
-import { ChatsInfo } from "./objects/chat_info";
 import { WebsocketManager } from "./websocket_connection";
-import { AuthRequest, MessageType, UserMessage } from "./ws_messages/message";
+import { ChatsUserWithInfo } from "./objects/chats_user_with_info";
 import { PopUpNewChatUI } from "./ui_objects/pop_up/start_new_chat";
+import { AuthRequest, MessageType, UserMessage } from "./ws_messages/message";
+import { UserShortInfo } from "./objects/user_info";
+import { ChatUI } from "./ui_objects/chat";
 
+const user_id: string | null = localStorage.getItem("user_id")
 const token: string | null = localStorage.getItem("access_token");
 const ws_manager = new WebsocketManager();
 
 
-let sidebar: SidebarUI = new SidebarUI();
-let pop_up_new_chat: PopUpNewChatUI = new PopUpNewChatUI();
+const sidebar: SidebarUI = new SidebarUI();
+const pop_up_new_chat: PopUpNewChatUI = new PopUpNewChatUI(ws_manager);
+const chat: ChatUI = new ChatUI(ws_manager, sidebar);
 
 /*          INITIALIZIND         */
-if (token != null) {
+if (token != null && user_id != null) {
     ws_manager.addEventListeners(
 
         // On open
         () => {
             console.log("Open connection!"); 
             /*      Authorize user     */
-            const auth_msg = new UserMessage(
-                MessageType.AUTH_CHECK,
-                JSON.stringify(
-                    new AuthRequest(
-                        parseInt(localStorage.getItem("user_id")!),
-                        localStorage.getItem("access_token")!
-                    )
-                )
-            );
-            ws_manager.sendMessage(JSON.stringify(auth_msg));
+            ws_manager.authorizationMessage(parseInt(user_id), token);
 
             /*      Get chats          */
-            const get_chats_msg = new UserMessage(
-                MessageType.GET_CHATS,
-                ""
-            );
-
-            ws_manager.sendMessage(JSON.stringify(get_chats_msg));
+            ws_manager.getChatsMessage();
         },
 
         // On close 
@@ -68,13 +58,28 @@ if (token != null) {
                     // Get chats
                     case MessageType.GET_CHATS: {
                         console.log(ans["content"]);
-                        const chats = Object.assign(new ChatsInfo(), JSON.parse(ans["content"]));
+                        const chats = Object.assign(new ChatsUserWithInfo(), JSON.parse(ans["content"]));
                         console.log(chats);
                         
                         sidebar.setupChats(chats);
 
                         break;
                     }
+                    
+                    case MessageType.START_CHAT: {
+                        if (ans["content"] == "USER_NOT_FOUND") {
+                            alert("Пользователь не существует!");
+                            break;
+                        }
+
+                        pop_up_new_chat.close();
+                        
+                        const short_info = Object.assign(new UserShortInfo(), JSON.parse(ans["content"]));
+                        chat.start_chat(short_info);
+
+                        break;
+                    }
+
                 }
             } catch (error) {
                 console.log("Server message: ", ev.data);

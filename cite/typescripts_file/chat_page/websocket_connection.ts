@@ -1,5 +1,3 @@
-import { CHAT_WS_URL } from "../constants";
-
 import {
     ArrayQueue,
     ConstantBackoff,
@@ -7,6 +5,13 @@ import {
     WebsocketBuilder,
     WebsocketEvent,
 } from "websocket-ts";
+
+import { CHAT_WS_URL } from "../constants";
+import { UserMessage, MessageType } from "./ws_messages/message";
+import { AuthRequest } from "./ws_messages/message";
+import { MessageContent } from "./objects/chat_message";
+import { ChatMessages } from "./objects/chat_info";
+
 
 export class WebsocketManager {
 
@@ -19,10 +24,58 @@ export class WebsocketManager {
             .build()
     }
 
+    /*              MESSAGES                */
+    // base message
     sendMessage(message: string){
         this.ws.send(message);
     }
 
+    // start chat message
+    startChatMessage(login: string) {
+        this.ws.send(
+            JSON.stringify(new UserMessage (
+                MessageType.START_CHAT,
+                login
+            ))
+        );
+    }
+
+    // Authorization message
+    authorizationMessage(user_id: number, token: string) {
+        this.ws.send(JSON.stringify(
+            new UserMessage(
+                MessageType.AUTH_CHECK,
+                JSON.stringify(
+                    new AuthRequest(
+                        user_id,
+                        token
+                    )
+                )
+            )));
+    }
+
+    // Get chats message
+    getChatsMessage() {
+        this.ws.send(JSON.stringify(
+            new UserMessage(
+                MessageType.GET_CHATS,
+                ""
+            )
+        ));
+    }
+
+    // Send message to user
+    sendChatMessage(message: ChatMessages) {
+        this.ws.send(JSON.stringify(
+            new UserMessage(
+                MessageType.SEND_MESSAGE,
+                JSON.stringify(message)
+            )
+        ))
+    }
+
+
+    /*              LISTENERS              */
     addEventListeners(
         open: () => void,
         close: () => void,

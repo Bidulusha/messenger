@@ -32,7 +32,11 @@ use database_functions::select_max_user_id;
 
 /*              Functions                */
 // Sing in checker
-pub async fn sign_in_auth(
+pub async fn sign_in_auth( 
+    /* 
+    Может произойти так, что на 1 почту зарегано несколько логинов
+    Стоит предусмотреть возможность выбрать, на какой аккаунт заходить
+    */
     TypedHeader(user_agent): TypedHeader<UserAgent>,
     State(state): State<Arc<AppState>>, 
     raw_data: String
@@ -110,7 +114,7 @@ pub async fn sign_up_auth(
             // 3) Create table active_seesions_user_[id]
             let _ = ActiveSessions::create(&state.client, &user.id).await;
 
-            // 3) Create table chats_user_[id]
+            // 3) Create tables group_chats_user_[id], private_chat_user_[id]
             let _ = ChatsUser::create(&state.client, &user.id).await;
 
             // 4) Create unique token for session and add to db

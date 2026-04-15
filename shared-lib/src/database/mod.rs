@@ -33,14 +33,16 @@ pub struct UsersInfo {
     pub id: i32,
     pub email: String,
     pub login: String,
-    pub password: String
+    pub password: String,
+    pub avatar: String,
 }
 
-// User chats 
+// User chats
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ChatsUser{
     pub id: i32,
     pub chat_id: i32,
+    pub with: Option<i32>
 }
 
 // Chats info
@@ -48,16 +50,25 @@ pub struct ChatsUser{
 pub struct ChatsInfo {
     id: i32, 
     avatar: String,
-    name: String,
+    chat_name: String,
     members_id: Vec<i32>
 }
 
+// Chats user join chats info
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ChatsUserWithInfo {
+    pub chat_id: i32,
+    pub chat_name: String,
+    pub chat_avatar: String,
+    pub with_user: Option<i32>,
+    pub members_id: Vec<i32>
+}
 
 // Chat [id]
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct Chat {
+pub struct ChatMessage {
     pub id: i32,
-    pub who_sended: i64,
+    pub who_sended: i32,
     pub send_time: NaiveTime,
     pub content: MessageContent
 }
