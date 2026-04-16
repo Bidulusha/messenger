@@ -13,22 +13,30 @@
 
   // ui_objects/sidebar.ts
   var SidebarUI = class {
-    constructor() {
+    constructor(ws) {
       this.sidebarDiv = document.querySelector("#main_sidebar");
+      this.ws = ws;
     }
     setupChats(chats_info) {
+      console.log(chats_info);
       chats_info.forEach((chat2, index) => {
+        console.log(chat2);
+        console.log(index);
         this.addChat(chat2);
       });
     }
     addChat(chat2) {
       const chat_info_button = document.createElement("button");
-      chat_info_button.id = `chat_${chat2.id}_info`;
+      chat_info_button.id = `chat_${chat2.chat_id}_info`;
       chat_info_button.classList.add("chat__info");
       chat_info_button.classList.add("sidebar-element");
+      chat_info_button.addEventListener("click", (ev) => {
+        this.ws.openChatMessage(chat2.chat_id);
+        this.currentChat = chat2.chat_id;
+      });
       const chat_avatar_div = document.createElement("div");
       const chat_avatar_img = document.createElement("img");
-      chat_avatar_img.src = `/static/images/avatars/${chat2.avatar}`;
+      chat_avatar_img.src = `/static/images/avatars/${chat2.chat_avatar}`;
       chat_avatar_div.append(chat_avatar_img);
       const chat_info_text = document.createElement("div");
       chat_info_text.classList.add("chat_info__text");
@@ -38,7 +46,7 @@
       chat_info_name.innerText = chat2.chat_name;
       chat_info_text.append(chat_info_name);
       chat_info_button.append(chat_info_text);
-      this.sidebarDiv.prepend(chat_info_button);
+      this.sidebarDiv.append(chat_info_button);
     }
     show() {
     }
@@ -708,11 +716,29 @@
         )
       ));
     }
+    // Open chat message
+    openChatMessage(chat_id) {
+      this.ws.send(JSON.stringify(
+        new UserMessage(
+          "OPEN_CHAT" /* OPEN_CHAT */,
+          chat_id.toString()
+        )
+      ));
+    }
     // Send message to user
     sendChatMessage(message) {
       this.ws.send(JSON.stringify(
         new UserMessage(
           "SEND_MESSAGE" /* SEND_MESSAGE */,
+          JSON.stringify(message)
+        )
+      ));
+    }
+    // Send fist message
+    sendChatFirstMessage(message) {
+      this.ws.send(JSON.stringify(
+        new UserMessage(
+          "START_CHAT" /* START_CHAT */,
           JSON.stringify(message)
         )
       ));
@@ -764,41 +790,40 @@
       this.members_id = members_id;
     }
   };
-  var ChatMessages = class {
-    constructor(id, who_sended, send_time, content) {
-      this.id = id;
-      this.who_sended = who_sended;
-      this.send_time = send_time.hmsTime;
-      this.content = content;
-    }
-  };
 
   // objects/chat_message.ts
   var MessageContent = class {
-    constructor(answer_to, forwarded_from, text_content, photo_content, files) {
-      this.answer_to = answer_to;
-      this.forwarded_from = forwarded_from;
-      this.text_content = text_content;
-      this.photo_content = photo_content;
-      this.files = files;
+    constructor(answer_to, forwarded_from, text_content, photos_content, files) {
+      if (typeof answer_to != typeof text_content) {
+        this.answer_to = answer_to;
+        this.forwarded_from = forwarded_from;
+        this.text_content = text_content;
+        this.photos_content = photos_content;
+        this.files = files;
+      }
     }
   };
-
-  // objects/time.ts
-  var Time = class {
-    get isoTime() {
-      return this._time;
+  var ChatMessages = class {
+    constructor(id, who_sended, send_time, content) {
+      if (typeof id != typeof send_time) {
+        this.id = id;
+        this.who_sended = who_sended;
+        this.send_time = send_time.hmsTime;
+        this.content = content;
+      }
     }
-    get hmsTime() {
-      return this._time.slice(0, 10);
-    }
-    constructor(time) {
-      this._time = time.toISOString();
+  };
+  var SendMessage = class {
+    constructor(id_who, chat_id, what) {
+      this.id_who = id_who;
+      this.id_to = chat_id;
+      this.what = what;
     }
   };
 
   // ui_objects/chat.ts
   var ChatUI = class {
+    // Constructor
     constructor(ws, sidebar2, user_id2) {
       // Elements on page
       this.chatElement = document.querySelector("#chat_body");
@@ -818,7 +843,15 @@
       this.close();
       this.chatButtonSend.addEventListener("click", () => this.send_message());
     }
-    startCondition() {
+    // Add message to page
+    add_message(message) {
+      const sended_message_container = document.createElement("div");
+      sended_message_container.classList.add("chat__body-text__message-container");
+      const sended_message_text = document.createElement("div");
+      sended_message_text.classList.add("chat__body-text__sended_message");
+      sended_message_text.innerText = message;
+      sended_message_container.append(sended_message_text);
+      this.chatBodyTextElement.append(sended_message_container);
     }
     show() {
       this.chatElement.style.display = "flex";
@@ -827,10 +860,17 @@
       this.chatBodyTextElement.innerHTML = "";
       this.chatElement.style.display = "none";
     }
-    open_chat() {
+    open_chat(chat_id, messages) {
+      this.close();
+      this.chat_id = chat_id;
+      messages.forEach((message, ind) => {
+        this.add_message(message.content.text_content);
+      });
+      this.show();
     }
     start_chat(user_info) {
       this.first_message = true;
+      this.user_with_chat_id = user_info.id;
       this.chat = new ChatsInfo(
         -1,
         user_info.avatar,
@@ -843,43 +883,53 @@
       this.chatAvatartImage.src = AVATARS_URL + user_info.avatar;
     }
     send_message() {
-      this.ws.sendChatMessage(
-        new ChatMessages(
-          this.chat.id,
-          this.user_id,
-          new Time(/* @__PURE__ */ new Date()),
-          new MessageContent(
-            -1,
-            "",
-            this.chatInputField.value,
-            [""],
-            [""]
+      if (this.first_message) {
+        this.first_message = false;
+        this.ws.sendChatFirstMessage(
+          new SendMessage(
+            this.user_id,
+            this.user_with_chat_id,
+            new MessageContent(
+              -1,
+              -1,
+              this.chatInputField.value,
+              [""],
+              [""]
+            )
           )
-        )
-      );
-      const sended_message_container = document.createElement("div");
-      sended_message_container.classList.add("chat__body-text__message-container");
-      const sended_message_text = document.createElement("div");
-      sended_message_text.classList.add("chat__body-text__sended_message");
-      sended_message_text.innerText = this.chatInputField.value;
-      sended_message_container.append(sended_message_text);
-      this.chatBodyTextElement.append(sended_message_container);
+        );
+      } else {
+        this.ws.sendChatMessage(
+          new SendMessage(
+            this.user_id,
+            this.chat_id,
+            new MessageContent(
+              -1,
+              -1,
+              this.chatInputField.value,
+              [""],
+              [""]
+            )
+          )
+        );
+      }
+      this.add_message(this.chatInputField.value);
     }
   };
 
   // index.ts
-  var user_id = localStorage.getItem("user_id");
+  var user_id = parseInt(localStorage.getItem("user_id"));
   var token = localStorage.getItem("access_token");
   var ws_manager = new WebsocketManager();
-  var sidebar = new SidebarUI();
+  var sidebar = new SidebarUI(ws_manager);
   var pop_up_new_chat = new PopUpNewChatUI(ws_manager);
-  var chat = new ChatUI(ws_manager, sidebar);
-  if (token != null && user_id != null) {
+  var chat = new ChatUI(ws_manager, sidebar, user_id);
+  if (token != null && !Number.isNaN(user_id)) {
     ws_manager.addEventListeners(
       // On open
       () => {
         console.log("Open connection!");
-        ws_manager.authorizationMessage(parseInt(user_id), token);
+        ws_manager.authorizationMessage(user_id, token);
         ws_manager.getChatsMessage();
       },
       // On close 
@@ -890,11 +940,12 @@
       (i, ev) => {
         try {
           const ans = JSON.parse(ev.data);
+          console.log(ans);
           switch (ans["message_type"]) {
             // Auth check
             case "AUTH_CHECK" /* AUTH_CHECK */: {
               if (ans["content"] == "ACCESS_DENIED") {
-                localStorage.removeItem("token");
+                localStorage.removeItem("access_token");
                 localStorage.removeItem("user_id");
                 window.location.replace("/sign_in");
               } else {
@@ -904,8 +955,10 @@
             }
             // Get chats
             case "GET_CHATS" /* GET_CHATS */: {
-              console.log(ans["content"]);
-              const chats = Object.assign(new ChatsUserWithInfo(), JSON.parse(ans["content"]));
+              const chats = JSON.parse(ans["content"]);
+              chats.forEach((chat2, index) => {
+                chat2 = Object.assign(new ChatsUserWithInfo(), chat2);
+              });
               console.log(chats);
               sidebar.setupChats(chats);
               break;
@@ -920,6 +973,30 @@
               chat.start_chat(short_info);
               break;
             }
+            case "OPEN_CHAT" /* OPEN_CHAT */: {
+              if (ans["content"] == "CHAT_NOT_FOUND") {
+                alert("\u0427\u0430\u0442\u0430 \u043D\u0435 \u0441\u0443\u0449\u0435\u0441\u0442\u0432\u0443\u0435\u0442!");
+                break;
+              }
+              console.log(ans["content"]);
+              const chat_messages = JSON.parse(ans["content"]);
+              chat_messages.forEach((message, ind) => {
+                message = Object.assign(new ChatMessages(), message);
+              });
+              console.log(chat_messages);
+              chat.open_chat(sidebar.currentChat, chat_messages);
+              break;
+            }
+            case "CREATE_CHAT" /* CREATE_CHAT */: {
+              const chat_info = Object.assign(new ChatsUserWithInfo(), JSON.parse(ans["content"]));
+              chat.chat_id = chat_info.chat_id;
+              sidebar.addChat(chat_info);
+            }
+            case "SEND_MESSAGE" /* SEND_MESSAGE */: {
+              const message = Object.assign(new ChatMessages(), JSON.parse(ans["content"]));
+              message.content = Object.assign(new MessageContent(), message.content);
+              chat.add_message(message.content.text_content);
+            }
           }
         } catch (error) {
           console.log("Server message: ", ev.data);
@@ -931,6 +1008,8 @@
       pop_up_new_chat.show();
     });
   } else {
+    localStorage.removeItem("access_token");
+    localStorage.removeItem("user_id");
     window.location.replace(SIGN_IN_URL);
   }
 })();

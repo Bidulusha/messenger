@@ -3,7 +3,8 @@ export enum MessageType {
     GET_CHATS = "GET_CHATS",
     OPEN_CHAT = "OPEN_CHAT",
     SEND_MESSAGE = "SEND_MESSAGE",
-    START_CHAT = "START_CHAT"
+    START_CHAT = "START_CHAT",
+    CREATE_CHAT = "CREATE_CHAT"
 }
 
 export class AuthRequest {

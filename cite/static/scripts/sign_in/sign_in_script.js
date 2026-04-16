@@ -4,6 +4,8 @@
   var DOMEN = "localhost";
   var BASE_URL = PROTOCOL + DOMEN;
   var WS_URL = "ws://" + DOMEN;
+  var STATIC_URL = "/static";
+  var AVATARS_URL = STATIC_URL + "/images/avatars/";
   var AUTH_API_URL = BASE_URL + ":8081";
   var CHAT_URL = BASE_URL + ":3000/chat";
   var SIGN_IN_URL = BASE_URL + ":3000/sign_in";
@@ -42,6 +44,9 @@
   // index.ts
   var signUpButton = document.querySelector(".button-sign-in button");
   var form = new Form();
+  if (localStorage.getItem("access_token") != null) {
+    window.location.replace(CHAT_URL);
+  }
   form.element.addEventListener("submit", async (e) => {
     e.preventDefault();
     try {
@@ -65,7 +70,6 @@
         case "ACCESS_ALLOWED": {
           localStorage.setItem("user_id", result["user_id"]);
           localStorage.setItem("access_token", result["token"]);
-          alert(result["user_id"]);
           window.location.replace(CHAT_URL);
           break;
         }

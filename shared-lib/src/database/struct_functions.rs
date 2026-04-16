@@ -2,10 +2,7 @@
 
 // crates
 use crate::database::{
-    UsersInfo,
-    ChatsUser,
-    ChatsInfo,
-    ChatsUserWithInfo
+    ChatMessage, ChatsInfo, ChatsUser, ChatsUserWithInfo, UsersInfo
 };
 
 // tokio postgres
@@ -40,8 +37,8 @@ impl From<Row> for ChatsInfo {
     fn from(item: Row) -> Self {
         ChatsInfo { 
             id: item.get("id"), 
-            avatar: item.get("avatart"), 
-            name: item.get("name"), 
+            avatar: item.get("avatar"), 
+            chat_name: item.get("chat_name"), 
             members_id: item.get("members_id") 
         }
     }
@@ -58,6 +55,18 @@ impl From<Row> for ChatsUserWithInfo {
         }
     }
 }
+
+impl From<Row> for ChatMessage {
+    fn from(item: Row) -> Self {
+        ChatMessage { 
+            id: item.get("id"),
+            who_sended: item.get("who_sended"),
+            send_time: item.get("send_time"),
+            content: item.get("content")
+        }
+    }
+}
+
 
 
 /*              From ChatsUserWith Info to ChatsInfo */

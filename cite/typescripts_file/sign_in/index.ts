@@ -4,6 +4,8 @@ import { Form } from "./form";
 const signUpButton: HTMLButtonElement | undefined = document.querySelector(".button-sign-in button")!;
 const form = new Form();
 
+if (localStorage.getItem("access_token") != null) {window.location.replace(CHAT_URL);}
+
 form.element.addEventListener("submit", async (e: Event) => {
     e.preventDefault();
 
@@ -30,7 +32,6 @@ form.element.addEventListener("submit", async (e: Event) => {
                 localStorage.setItem("user_id", result["user_id"]);
                 localStorage.setItem("access_token", result["token"]);
 
-                alert(result["user_id"]);
                 window.location.replace(CHAT_URL);
                 break;
             }

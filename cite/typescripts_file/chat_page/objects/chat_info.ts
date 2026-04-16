@@ -19,22 +19,3 @@ export class ChatsInfo {
         this.members_id = members_id;
     }   
 }
-
-export class ChatMessages {
-    id: number;
-    who_sended: number;
-    send_time: String;
-    content: MessageContent;
-
-    constructor(
-        id: number,
-        who_sended: number,
-        send_time: Time,
-        content: MessageContent,
-    ) {
-        this.id = id;
-        this.who_sended = who_sended;
-        this.send_time = send_time.hmsTime;
-        this.content = content;
-    }
-}

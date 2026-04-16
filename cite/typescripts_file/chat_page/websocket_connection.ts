@@ -9,8 +9,7 @@ import {
 import { CHAT_WS_URL } from "../constants";
 import { UserMessage, MessageType } from "./ws_messages/message";
 import { AuthRequest } from "./ws_messages/message";
-import { MessageContent } from "./objects/chat_message";
-import { ChatMessages } from "./objects/chat_info";
+import { MessageContent, SendMessage } from "./objects/chat_message";
 
 
 export class WebsocketManager {
@@ -64,11 +63,31 @@ export class WebsocketManager {
         ));
     }
 
+    // Open chat message
+    openChatMessage(chat_id: number) { 
+        this.ws.send(JSON.stringify(
+            new UserMessage(
+                MessageType.OPEN_CHAT,
+                chat_id.toString()
+            )
+        ));
+    }
+
     // Send message to user
-    sendChatMessage(message: ChatMessages) {
+    sendChatMessage(message: SendMessage) {
         this.ws.send(JSON.stringify(
             new UserMessage(
                 MessageType.SEND_MESSAGE,
+                JSON.stringify(message)
+            )
+        ))
+    }
+
+    // Send fist message
+    sendChatFirstMessage(message: SendMessage) {
+        this.ws.send(JSON.stringify(
+            new UserMessage(
+                MessageType.START_CHAT,
                 JSON.stringify(message)
             )
         ))

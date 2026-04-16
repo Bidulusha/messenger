@@ -18,9 +18,10 @@ use postgres_types::{ToSql, FromSql};
 /*              Structures              */
 /*   SQL structures  */
 #[derive(Debug, Clone, FromSql, ToSql, Serialize, Deserialize)]
+#[postgres(name="messagecontent")]
 pub struct MessageContent {
-    pub answer_to: i64,
-    pub forwarded_from: i64,
+    pub answer_to: i32,
+    pub forwarded_from: i32,
     pub text_content: String,
     pub photos_content: Vec<String>,
     pub files: Vec<String>
@@ -48,10 +49,10 @@ pub struct ChatsUser{
 // Chats info
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ChatsInfo {
-    id: i32, 
-    avatar: String,
-    chat_name: String,
-    members_id: Vec<i32>
+    pub id: i32, 
+    pub avatar: String,
+    pub chat_name: String,
+    pub members_id: Vec<i32>
 }
 
 // Chats user join chats info

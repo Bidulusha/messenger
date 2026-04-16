@@ -1,7 +1,7 @@
 /*              Includes                 */
 // Crate
 use crate::database::{
-    ActiveSessions, ChatsInfo, ChatsUser, UsersInfo, ChatsUserWithInfo
+    ActiveSessions, ChatMessage, ChatsInfo, ChatsUser, ChatsUserWithInfo, UsersInfo
 };
 
 // std
@@ -208,12 +208,11 @@ impl ChatsUser {
                     ELSE ui.avatar \
                 END AS chat_avatar, \
                 cu.with_user, \
-                COALESCE(ci.members_id, ARRAY[]::bigint[]) AS members_id \
+                COALESCE(ci.members_id, ARRAY[]::integer[]) AS members_id \
             FROM chats_user_{} cu \
             LEFT JOIN chats_info ci ON cu.chat_id = ci.id \
             LEFT JOIN users_info ui ON cu.with_user = ui.id \
-            WHERE cu.id = {};\
-        ", user_id, user_id), &[]
+        ", user_id), &[]
         ).await {
             Ok(data) => {
                 println!("{}", format!("Successfully joined chat info for user {}", user_id).green());
@@ -238,14 +237,78 @@ impl ChatsUser {
 }
 
 impl ChatsInfo {
-    pub async fn add(client: &Arc<Client>, chat_info: ChatsInfo) {
+    pub async fn get(client: &Arc<Client>, chat_id: &i32) -> Vec<ChatsInfo> {
         match client.query("\
-            insert into chats_info(avatar, chat_name, members_id) \
-            values($1, $2, $3, $4) \
-        ", &[&chat_info.avatar, &chat_info.chat_name, &chat_info.members_id])
-        .await {
-            Ok(_) => {println!("{}", "Succesful add chat to chat info".green())}
-            Err(err) => {println!("{}", format!("Error add chat to chat info! Error {:?}", err).red())}
+            select * from chats_info \
+            where id = $1", 
+        &[chat_id]).await {
+            Ok(data) => {
+                data.into_iter().map(Into::into).collect()
+            }
+            Err(err) => {
+                println!("{}", format!("Error get from chat info! Error {:?}", err).red());
+                vec![]
+            }
         }
     }
+
+    pub async fn add(client: &Arc<Client>, chat_info: &ChatsInfo) -> i32{
+        match client.query("\
+            insert into chats_info(avatar, chat_name, members_id) \
+            values($1, $2, $3) \
+            returning id; \
+        ", &[&chat_info.avatar, &chat_info.chat_name, &chat_info.members_id])
+        .await {
+            Ok(data) => {
+                println!("{}", "Succesful add chat to chat info".green());
+                data[0].get("id")
+                }
+            Err(err) => {
+                println!("{}", format!("Error add chat to chat info! Error {:?}", err).red()); 
+                return -1;
+            }
+        }
+    }
+}
+
+impl ChatMessage {
+    pub async fn select_all(client: &Arc<Client>, chat_id: &i32) -> Vec<ChatMessage> {
+        match client.query(&format!("\
+        select * from chat_message_{}\
+        ", chat_id), &[]).await {
+            Ok(data) => {
+                println!("{}", "Succesful select * from chat_message".green());
+                data.into_iter().map(Into::into).collect()
+            }
+            Err(err) => {
+                println!("{}", format!("Error select * from chat_message table! Error {:?}", err).red());
+                vec![]
+            }
+        }
+    }
+
+    pub async fn create(client: &Arc<Client>, chat_id: &i32) {
+        match client.query(&format!("\
+            create table if not exists public.chat_message_{}( \
+            id integer NOT NULL GENERATED ALWAYS AS IDENTITY (INCREMENT 1 START 1 MINVALUE 1 MAXVALUE 2147483647 CACHE 1),\
+            who_sended integer NOT NULL references users_info(id),\
+            send_time time NOT NULL, \
+            content MessageContent NOT NULL\
+        );", chat_id), &[]).await {
+            Ok(_) => {println!("{}", "Succesful create chat_message".green()) }
+            Err(err) => {println!("{}", format!("Error create chat_message table! Error {:?}", err).red()) }
+        }
+    }
+    
+    pub async fn add(client: &Arc<Client>, chat_id: &i32, message: &ChatMessage) {
+        match client.query(&format!("\
+            insert into public.chat_message_{}(who_sended, send_time, content) \
+            values($1, $2, $3)", chat_id
+        ), &[&message.who_sended, &message.send_time, &message.content]
+        ).await {
+            Ok(_) => {println!("{}", "Succesful add message to chat_message!".green())}
+            Err(err) => {println!("{}", format!("Error adding message to chat_message table! Error {:?}", err).red()) }
+        }
+    }
+
 }

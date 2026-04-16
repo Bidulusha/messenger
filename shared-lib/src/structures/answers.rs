@@ -50,7 +50,12 @@ pub enum UserStatus {
     USER_NOT_FOUND,
 }
 
-
+// User status for find
+#[allow(non_camel_case_types)]
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
+pub enum ChatStatus {
+    CHAT_NOT_FOUND,
+}
 
 
 impl From<AuthStatus> for String {
@@ -86,6 +91,16 @@ impl From<UserStatus> for String {
         match value {
             UserStatus::USER_NOT_FOUND => {
                 "USER_NOT_FOUND".into()
+            }
+        }
+    }
+}
+
+impl From<ChatStatus> for String {
+    fn from(value: ChatStatus) -> Self{
+        match value {
+            ChatStatus::CHAT_NOT_FOUND => {
+                "CHAT_NOT_FOUND".into()
             }
         }
     }

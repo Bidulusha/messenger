@@ -7,25 +7,27 @@ import { PopUpNewChatUI } from "./ui_objects/pop_up/start_new_chat";
 import { AuthRequest, MessageType, UserMessage } from "./ws_messages/message";
 import { UserShortInfo } from "./objects/user_info";
 import { ChatUI } from "./ui_objects/chat";
+import { ChatMessages, MessageContent } from "./objects/chat_message";
 
-const user_id: string | null = localStorage.getItem("user_id")
+const user_id: number = parseInt(localStorage.getItem("user_id")!);
 const token: string | null = localStorage.getItem("access_token");
 const ws_manager = new WebsocketManager();
 
 
-const sidebar: SidebarUI = new SidebarUI();
+const sidebar: SidebarUI = new SidebarUI(ws_manager);
 const pop_up_new_chat: PopUpNewChatUI = new PopUpNewChatUI(ws_manager);
-const chat: ChatUI = new ChatUI(ws_manager, sidebar);
+const chat: ChatUI = new ChatUI(ws_manager, sidebar, user_id);
+
 
 /*          INITIALIZIND         */
-if (token != null && user_id != null) {
+if (token != null && !Number.isNaN(user_id)) {
     ws_manager.addEventListeners(
 
         // On open
         () => {
             console.log("Open connection!"); 
             /*      Authorize user     */
-            ws_manager.authorizationMessage(parseInt(user_id), token);
+            ws_manager.authorizationMessage(user_id, token);
 
             /*      Get chats          */
             ws_manager.getChatsMessage();
@@ -38,12 +40,14 @@ if (token != null && user_id != null) {
         (i: Websocket, ev: MessageEvent) => {
             try {
                 const ans = JSON.parse(ev.data);
+                console.log(ans);
+
                 switch (ans["message_type"]) {
 
                     // Auth check
                     case MessageType.AUTH_CHECK: {
                         if (ans["content"] == "ACCESS_DENIED"){
-                            localStorage.removeItem("token");
+                            localStorage.removeItem("access_token");
                             localStorage.removeItem("user_id");
                             window.location.replace("/sign_in");
                         }
@@ -57,8 +61,10 @@ if (token != null && user_id != null) {
 
                     // Get chats
                     case MessageType.GET_CHATS: {
-                        console.log(ans["content"]);
-                        const chats = Object.assign(new ChatsUserWithInfo(), JSON.parse(ans["content"]));
+                        const chats: ChatsUserWithInfo[] = JSON.parse(ans["content"]);
+                        chats.forEach((chat, index) => {
+                            chat = Object.assign(new ChatsUserWithInfo(), chat);
+                        });
                         console.log(chats);
                         
                         sidebar.setupChats(chats);
@@ -80,6 +86,35 @@ if (token != null && user_id != null) {
                         break;
                     }
 
+                    case MessageType.OPEN_CHAT: {
+                        if (ans["content"] == "CHAT_NOT_FOUND"){
+                            alert("Чата не существует!");
+                            break;
+                        }
+                        console.log(ans["content"]);
+                        const chat_messages: ChatMessages[] = JSON.parse(ans["content"]);
+                        chat_messages.forEach((message, ind) => {
+                            message = Object.assign(new ChatMessages(), message);
+                        });
+                        console.log(chat_messages);
+                        chat.open_chat(sidebar.currentChat, chat_messages);
+
+                        break;
+                    }
+
+                    case MessageType.CREATE_CHAT: {
+                        const chat_info: ChatsUserWithInfo = Object.assign(new ChatsUserWithInfo(), JSON.parse(ans["content"]));
+                        chat.chat_id = chat_info.chat_id;
+                        sidebar.addChat(chat_info);
+                    }
+
+                    case MessageType.SEND_MESSAGE: {
+                        const message: ChatMessages = Object.assign(new ChatMessages(), JSON.parse(ans["content"]));
+                        message.content = Object.assign(new MessageContent(), message.content);
+                        
+                        chat.add_message(message.content.text_content);
+                    }
+
                 }
             } catch (error) {
                 console.log("Server message: ", ev.data);
@@ -94,5 +129,7 @@ if (token != null && user_id != null) {
     });
 }
 else {
+    localStorage.removeItem("access_token");
+    localStorage.removeItem("user_id");
     window.location.replace(SIGN_IN_URL);
 }

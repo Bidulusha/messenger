@@ -1,38 +1,41 @@
 import { ChatsInfo } from "../objects/chat_info";
+import { ChatsUserWithInfo } from "../objects/chats_user_with_info";
+import { WebsocketManager } from "../websocket_connection";
+import { ChatUI } from "./chat";
 import { ObjectUI } from "./object_ui";
-
-// <div id="chat_[id]_info" class="chat__info">
-//     <div class="chat__avatar">
-//         <img src="/static/images/avatars/ph.png">
-//     </div>
-//     <div class="chat_info__text">
-//         <div class="chat__info-name line-limit-length">Андреев Вадим Антонович</div>
-//         // <div class="chat__info-last-message line-limit-length"></div>
-//     </div>
-// </div>
 
 export class SidebarUI implements ObjectUI {
     sidebarDiv: HTMLDivElement = document.querySelector("#main_sidebar")!; 
+    
+    ws: WebsocketManager;
+    currentChat: number;
 
-    constructor(){
-        
+    constructor(ws: WebsocketManager){
+        this.ws = ws;
     }
 
-    setupChats(chats_info: ChatsInfo[]) {
+    setupChats(chats_info: ChatsUserWithInfo[]) {
+        console.log(chats_info);
         chats_info.forEach((chat, index) => {
+            console.log(chat);
+            console.log(index);
             this.addChat(chat);
         })
     }
 
-    addChat(chat: ChatsInfo){
+    addChat(chat: ChatsUserWithInfo){
         const chat_info_button = document.createElement("button");
-        chat_info_button.id = `chat_${chat.id}_info`;
+        chat_info_button.id = `chat_${chat.chat_id}_info`;
         chat_info_button.classList.add("chat__info");
         chat_info_button.classList.add("sidebar-element");
+        chat_info_button.addEventListener("click", (ev) => {
+            this.ws.openChatMessage(chat.chat_id);
+            this.currentChat = chat.chat_id;
+        })
         
         const chat_avatar_div = document.createElement("div");
         const chat_avatar_img = document.createElement("img");
-        chat_avatar_img.src = `/static/images/avatars/${chat.avatar}`;
+        chat_avatar_img.src = `/static/images/avatars/${chat.chat_avatar}`;
         chat_avatar_div.append(chat_avatar_img);
 
         const chat_info_text = document.createElement("div");
@@ -45,7 +48,7 @@ export class SidebarUI implements ObjectUI {
         chat_info_text.append(chat_info_name);
 
         chat_info_button.append(chat_info_text);
-        this.sidebarDiv.prepend(chat_info_button);
+        this.sidebarDiv.append(chat_info_button);
     }
 
     show(){

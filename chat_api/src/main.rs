@@ -3,19 +3,23 @@
 mod route;
 mod handlers;
 mod message_from_user;
+mod websocket_messages;
 
 // std
 use std::{
-    net::SocketAddr,
-    sync::{Arc},
+    collections::HashMap, net::SocketAddr, sync::Arc
 };
 
+use axum::extract::ws::{Message, WebSocket};
 // dotenv
 use dotenv::dotenv;
 
+use futures_util::stream::SplitSink;
 // Tokio
 use tokio::sync::broadcast::{self, Receiver, Sender};
+use tokio::sync::Mutex;
 
+use tokio::sync::mpsc::UnboundedSender;
 // Tokio postgres
 use tokio_postgres::{
     NoTls,
@@ -35,8 +39,7 @@ use route::create_router;
 /*              App state            */
 struct AppState{
     client: Arc<Client>,
-    tx: Sender<String>,
-    rx: Receiver<String>
+    connections: Arc<Mutex<HashMap<i32, UnboundedSender<Message>>>>
 }
 
 
@@ -70,8 +73,7 @@ async fn main() -> Result<(), Error>{
     // Create state
     let state = AppState{
         client: Arc::new(client),
-        tx,
-        rx
+        connections: Arc::new(Mutex::new(HashMap::new()))
     };
     
     // Create app with state

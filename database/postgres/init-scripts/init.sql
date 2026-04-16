@@ -25,8 +25,8 @@ DO $$
 BEGIN
     IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'MessageContent') THEN
         CREATE TYPE MessageContent AS (
-        answer_to       bigint,
-        forwarded_from  text,
+        answer_to       integer,
+        forwarded_from  integer,
         text_content    text,
         photos_content  text[],
         files           text[]
@@ -48,7 +48,7 @@ create table if not exists public.chats_info(
     id integer NOT NULL GENERATED ALWAYS AS IDENTITY (INCREMENT 1 START 1 MINVALUE 1 MAXVALUE 2147483647 CACHE 1) primary key,
     avatar text NOT NULL,
     chat_name varchar(128) NOT NULL,
-    members_id bigint[] NOT NULL
+    members_id integer[] NOT NULL
 );
 
 -- create table if not exists public.active_sessions (

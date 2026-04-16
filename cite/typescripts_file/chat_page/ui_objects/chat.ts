@@ -1,10 +1,10 @@
 import { ObjectUI } from "./object_ui";
 import { ChatsUserWithInfo } from "../objects/chats_user_with_info";
-import { ChatMessages, ChatsInfo} from "../objects/chat_info";
+import { ChatsInfo} from "../objects/chat_info";
 import { UserShortInfo } from "../objects/user_info";
 import { AVATARS_URL } from "../../constants";
 import { WebsocketManager } from "../websocket_connection";
-import { MessageContent } from "../objects/chat_message";
+import { MessageContent, ChatMessages, SendMessage} from "../objects/chat_message";
 import { SidebarUI } from "./sidebar";
 import { Time } from "../objects/time";
 
@@ -31,10 +31,13 @@ export class ChatUI implements ObjectUI {
     
     // Additional info
     user_id: number;
+    user_with_chat_id: number;
     chat: ChatsInfo;
-    
+    chat_id: number;
+
     first_message: boolean = false;
 
+    // Constructor
     constructor(ws: WebsocketManager, sidebar: SidebarUI, user_id: number) {
         this.ws = ws;
         this.user_id = user_id;
@@ -43,8 +46,16 @@ export class ChatUI implements ObjectUI {
         this.chatButtonSend.addEventListener("click", () => this.send_message());
     }
 
-    startCondition() {
-
+    // Add message to page
+    add_message(message: string) {
+        const sended_message_container = document.createElement("div");
+        sended_message_container.classList.add("chat__body-text__message-container");
+        const sended_message_text = document.createElement("div");
+        sended_message_text.classList.add("chat__body-text__sended_message");
+        sended_message_text.innerText = message;
+        
+        sended_message_container.append(sended_message_text);
+        this.chatBodyTextElement.append(sended_message_container);
     }
 
     show() {
@@ -56,13 +67,19 @@ export class ChatUI implements ObjectUI {
         this.chatElement.style.display = "none";
     }
 
-    open_chat() {
-        // TODO
+    open_chat(chat_id: number, messages: ChatMessages[]) {
+        this.close();
+        this.chat_id = chat_id;
+        messages.forEach((message, ind) => {
+            this.add_message(message.content.text_content);
+        });
+        this.show();
     }
 
     start_chat(user_info: UserShortInfo){
         // Base
         this.first_message = true;
+        this.user_with_chat_id = user_info.id;
         this.chat = new ChatsInfo (
             -1,
             user_info.avatar,
@@ -81,29 +98,39 @@ export class ChatUI implements ObjectUI {
 
     send_message() {
         // Send message
-        this.ws.sendChatMessage(
-            new ChatMessages(
-                this.chat.id,
-                this.user_id,
-                new Time(new Date()),
-                new MessageContent (
-                    -1,
-                    "",
-                    this.chatInputField.value,
-                    [""],
-                    [""]    
+        if (this.first_message){
+            this.first_message = false;
+            this.ws.sendChatFirstMessage(
+                new SendMessage(
+                    this.user_id,
+                    this.user_with_chat_id,
+                    new MessageContent (
+                        -1,
+                        -1,
+                        this.chatInputField.value,
+                        [""],
+                        [""],
+                    )
+                )
+            );
+        }
+        else {
+            this.ws.sendChatMessage(
+                new SendMessage(
+                    this.user_id,
+                    this.chat_id,
+                    new MessageContent (
+                        -1,
+                        -1,
+                        this.chatInputField.value,
+                        [""],
+                        [""],
+                    )
                 )
             )
-        );
+        }
 
         // Create message on page
-        const sended_message_container = document.createElement("div");
-        sended_message_container.classList.add("chat__body-text__message-container");
-        const sended_message_text = document.createElement("div");
-        sended_message_text.classList.add("chat__body-text__sended_message");
-        sended_message_text.innerText = this.chatInputField.value;
-        
-        sended_message_container.append(sended_message_text);
-        this.chatBodyTextElement.append(sended_message_container);
+        this.add_message(this.chatInputField.value);
     }
 }
