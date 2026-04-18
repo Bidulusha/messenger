@@ -224,6 +224,38 @@ impl ChatsUser {
             }
         }
     }
+
+    pub async fn select_chat_join_chat_info(client: &Arc<Client>, user_id: &i32, chat_id: &i32) -> Vec<ChatsUserWithInfo> {
+        match client.query(
+            &format!("\
+            SELECT \
+                cu.chat_id, \
+                CASE \
+                    WHEN cu.with_user IS NULL THEN ci.chat_name \
+                    ELSE ui.login \
+                END AS chat_name, \
+                CASE \
+                    WHEN cu.with_user IS NULL THEN ci.avatar \
+                    ELSE ui.avatar \
+                END AS chat_avatar, \
+                cu.with_user, \
+                COALESCE(ci.members_id, ARRAY[]::integer[]) AS members_id \
+            FROM chats_user_{} cu \
+            LEFT JOIN chats_info ci ON cu.chat_id = ci.id \
+            LEFT JOIN users_info ui ON cu.with_user = ui.id \
+            WHERE cu.chat_id = $1 \
+        ", user_id), &[chat_id]
+        ).await {
+            Ok(data) => {
+                println!("{}", format!("Successfully joined chat info for user {}", user_id).green());
+                data.into_iter().map(Into::into).collect()
+            }
+            Err(err) => {
+                eprintln!("{}", format!("Cannot select chat group with user info! Error: {:?}", err).red());
+                vec![]
+            }
+        }
+    }
     
     pub async fn add_chat(client: &Arc<Client>, user_id: &i32, chat_id: &i32, with_user: Option<&i32>) -> Result<(), Error> {
         match client.execute(&format!("\

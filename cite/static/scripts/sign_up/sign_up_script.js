@@ -1,9 +1,11 @@
 (() => {
   // ../constants.ts
   var PROTOCOL = "http://";
-  var DOMEN = "localhost";
+  var DOMEN = "10.131.212.200";
   var BASE_URL = PROTOCOL + DOMEN;
   var WS_URL = "ws://" + DOMEN;
+  var STATIC_URL = "/static";
+  var AVATARS_URL = STATIC_URL + "/images/avatars/";
   var AUTH_API_URL = BASE_URL + ":8081";
   var CHAT_URL = BASE_URL + ":3000/chat";
   var SIGN_IN_URL = BASE_URL + ":3000/sign_in";

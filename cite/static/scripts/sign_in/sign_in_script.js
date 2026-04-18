@@ -1,7 +1,7 @@
 (() => {
   // ../constants.ts
   var PROTOCOL = "http://";
-  var DOMEN = "localhost";
+  var DOMEN = "10.131.212.200";
   var BASE_URL = PROTOCOL + DOMEN;
   var WS_URL = "ws://" + DOMEN;
   var STATIC_URL = "/static";

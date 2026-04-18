@@ -37,8 +37,9 @@ pub struct TokenCheckAnswer {
 
 // User short info for sending
 #[derive(Debug, Clone, Serialize, Deserialize, Hash)]
-pub struct UserShortInfo {
+pub struct UserShortInfoWithChatId {
     pub id: i32,
+    pub chat_id: i32,
     pub login: String,
     pub avatar: String,
 }

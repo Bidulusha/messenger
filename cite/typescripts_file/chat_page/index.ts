@@ -17,6 +17,7 @@ const ws_manager = new WebsocketManager();
 const sidebar: SidebarUI = new SidebarUI(ws_manager);
 const pop_up_new_chat: PopUpNewChatUI = new PopUpNewChatUI(ws_manager);
 const chat: ChatUI = new ChatUI(ws_manager, sidebar, user_id);
+let initialized: boolean = false;
 
 
 /*          INITIALIZIND         */
@@ -26,11 +27,13 @@ if (token != null && !Number.isNaN(user_id)) {
         // On open
         () => {
             console.log("Open connection!"); 
+            console.log(initialized);
             /*      Authorize user     */
             ws_manager.authorizationMessage(user_id, token);
 
             /*      Get chats          */
-            ws_manager.getChatsMessage();
+            if (!initialized) { ws_manager.getChatsMessage(); initialized = true;}
+            
         },
 
         // On close 
@@ -52,7 +55,6 @@ if (token != null && !Number.isNaN(user_id)) {
                             window.location.replace("/sign_in");
                         }
                         else {
-                            
                             console.log("Access to user allowed!");
                         }
 
@@ -80,7 +82,7 @@ if (token != null && !Number.isNaN(user_id)) {
 
                         pop_up_new_chat.close();
                         
-                        const short_info = Object.assign(new UserShortInfo(), JSON.parse(ans["content"]));
+                        const short_info = Object.assign(new ChatsUserWithInfo(), JSON.parse(ans["content"]));
                         chat.start_chat(short_info);
 
                         break;
@@ -106,13 +108,18 @@ if (token != null && !Number.isNaN(user_id)) {
                         const chat_info: ChatsUserWithInfo = Object.assign(new ChatsUserWithInfo(), JSON.parse(ans["content"]));
                         chat.chat_id = chat_info.chat_id;
                         sidebar.addChat(chat_info);
+
+                        break;
                     }
 
                     case MessageType.SEND_MESSAGE: {
                         const message: ChatMessages = Object.assign(new ChatMessages(), JSON.parse(ans["content"]));
                         message.content = Object.assign(new MessageContent(), message.content);
                         
-                        chat.add_message(message.content.text_content);
+
+                        chat.add_message(message);
+
+                        break;
                     }
 
                 }

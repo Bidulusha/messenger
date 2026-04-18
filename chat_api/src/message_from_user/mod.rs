@@ -7,7 +7,7 @@ use chrono::NaiveTime;
 use serde::{Deserialize, Serialize};
 
 // Project files
-use shared_lib::structures::answers::{AuthAnswer, AuthStatus, ChatStatus, UserShortInfo, UserStatus};
+use shared_lib::structures::answers::{AuthAnswer, AuthStatus, ChatStatus, UserStatus};
 
 // Project libraries
 use shared_lib::database::{ChatMessage, ChatsInfo, ChatsUserWithInfo, MessageContent, UsersInfo};
@@ -82,14 +82,12 @@ impl UserMessage {
         }).unwrap()
     }
 
-    pub fn start_chat(user_info: &UsersInfo) -> String{
+    pub fn start_chat(user_info: &ChatsUserWithInfo) -> String{
         return serde_json::to_string(&UserMessage {
             message_type: MessageType::START_CHAT,
-            content: serde_json::to_string(&UserShortInfo{
-                id: user_info.id,
-                login: user_info.login.clone(),
-                avatar: user_info.avatar.clone()
-            }).unwrap()
+            content: serde_json::to_string(
+                user_info
+            ).unwrap()
         }).unwrap()
     }
 

@@ -1,7 +1,7 @@
 (() => {
   // ../constants.ts
   var PROTOCOL = "http://";
-  var DOMEN = "localhost";
+  var DOMEN = "10.131.212.200";
   var BASE_URL = PROTOCOL + DOMEN;
   var WS_URL = "ws://" + DOMEN;
   var STATIC_URL = "/static";
@@ -777,10 +777,6 @@
     }
   };
 
-  // objects/user_info.ts
-  var UserShortInfo = class {
-  };
-
   // objects/chat_info.ts
   var ChatsInfo = class {
     constructor(id, avatar, chat_name, members_id) {
@@ -834,27 +830,59 @@
       this.chatNameElement = this.chatHeaderElement.querySelector(".chat__header-info__name");
       this.chatBodyElement = this.chatElement.querySelector(".chat__body");
       this.chatBodyTextElement = this.chatBodyElement.querySelector(".chat__body-text");
-      this.chatInputElement = this.chatBodyElement.querySelector(".chat__body-input");
-      this.chatInputField = this.chatInputElement.querySelector(".chat__body-input__text");
-      this.chatButtonSend = this.chatInputElement.querySelector(".chat__body-input__button");
+      this.chatInputElement = this.chatElement.querySelector(".chat__input");
+      this.chatInputField = this.chatInputElement.querySelector(".chat__input-text");
+      this.chatButtonSend = this.chatInputElement.querySelector(".chat__input-button");
+      // Input element charatresitics
+      this.input_base_height = this.chatInputField.scrollHeight;
       this.first_message = false;
       this.ws = ws;
       this.user_id = user_id2;
       this.close();
       this.chatButtonSend.addEventListener("click", () => this.send_message());
+      this.chatInputElement.addEventListener("keypress", (ev) => {
+        if (ev.keyCode == 13 && !ev.shiftKey) {
+          ev.preventDefault();
+          this.send_message();
+        }
+      });
+    }
+    // Set chat_id
+    set chat_id(value) {
+      this._chat_id = value;
     }
     // Add message to page
     add_message(message) {
       const sended_message_container = document.createElement("div");
       sended_message_container.classList.add("chat__body-text__message-container");
       const sended_message_text = document.createElement("div");
+      if (message.who_sended == this.user_id)
+        sended_message_text.classList.add("chat__body-text__sended_message");
+      else sended_message_text.classList.add("chat__body-text__recieved_message");
+      sended_message_text.classList.add("message-text");
+      sended_message_text.innerText = message.content.text_content;
+      sended_message_container.append(sended_message_text);
+      this.chatBodyTextElement.append(sended_message_container);
+    }
+    // Add header
+    add_header(login, avatar) {
+      this.chatNameElement.innerText = login;
+      this.chatAvatartImage.style.display = "block";
+      this.chatAvatartImage.src = AVATARS_URL + avatar;
+    }
+    add_message_string(message) {
+      const sended_message_container = document.createElement("div");
+      sended_message_container.classList.add("chat__body-text__message-container");
+      const sended_message_text = document.createElement("div");
       sended_message_text.classList.add("chat__body-text__sended_message");
+      sended_message_text.classList.add("message-text");
       sended_message_text.innerText = message;
       sended_message_container.append(sended_message_text);
       this.chatBodyTextElement.append(sended_message_container);
     }
     show() {
       this.chatElement.style.display = "flex";
+      this.chatBodyTextElement.scroll(0, this.chatBodyTextElement.scrollHeight);
     }
     close() {
       this.chatBodyTextElement.innerHTML = "";
@@ -862,27 +890,30 @@
     }
     open_chat(chat_id, messages) {
       this.close();
-      this.chat_id = chat_id;
+      this._chat_id = chat_id;
       messages.forEach((message, ind) => {
-        this.add_message(message.content.text_content);
+        this.add_message(message);
       });
       this.show();
     }
     start_chat(user_info) {
+      this.close();
       this.first_message = true;
-      this.user_with_chat_id = user_info.id;
+      this.user_with_chat_id = user_info.chat_id;
       this.chat = new ChatsInfo(
         -1,
-        user_info.avatar,
-        user_info.login,
+        user_info.chat_avatar,
+        user_info.chat_name,
         []
       );
       this.show();
-      this.chatNameElement.innerText = user_info.login;
-      this.chatAvatartImage.style.display = "block";
-      this.chatAvatartImage.src = AVATARS_URL + user_info.avatar;
+      this.add_header(user_info.chat_name, user_info.chat_avatar);
     }
     send_message() {
+      if (this.chatInputField.innerText == "") {
+        alert("\u0422\u0435\u043A\u0441\u0442 \u043D\u0435 \u043C\u043E\u0436\u0435\u0442 \u0431\u044B\u0442\u044C \u043F\u0443\u0441\u0442\u044B\u043C!");
+        return;
+      }
       if (this.first_message) {
         this.first_message = false;
         this.ws.sendChatFirstMessage(
@@ -892,7 +923,7 @@
             new MessageContent(
               -1,
               -1,
-              this.chatInputField.value,
+              this.chatInputField.innerText,
               [""],
               [""]
             )
@@ -902,18 +933,20 @@
         this.ws.sendChatMessage(
           new SendMessage(
             this.user_id,
-            this.chat_id,
+            this._chat_id,
             new MessageContent(
               -1,
               -1,
-              this.chatInputField.value,
+              this.chatInputField.innerText,
               [""],
               [""]
             )
           )
         );
       }
-      this.add_message(this.chatInputField.value);
+      this.add_message_string(this.chatInputField.innerText);
+      this.chatInputField.innerText = "";
+      this.chatBodyTextElement.scroll(0, this.chatBodyTextElement.scrollHeight);
     }
   };
 
@@ -924,13 +957,18 @@
   var sidebar = new SidebarUI(ws_manager);
   var pop_up_new_chat = new PopUpNewChatUI(ws_manager);
   var chat = new ChatUI(ws_manager, sidebar, user_id);
+  var initialized = false;
   if (token != null && !Number.isNaN(user_id)) {
     ws_manager.addEventListeners(
       // On open
       () => {
         console.log("Open connection!");
+        console.log(initialized);
         ws_manager.authorizationMessage(user_id, token);
-        ws_manager.getChatsMessage();
+        if (!initialized) {
+          ws_manager.getChatsMessage();
+          initialized = true;
+        }
       },
       // On close 
       () => {
@@ -969,7 +1007,7 @@
                 break;
               }
               pop_up_new_chat.close();
-              const short_info = Object.assign(new UserShortInfo(), JSON.parse(ans["content"]));
+              const short_info = Object.assign(new ChatsUserWithInfo(), JSON.parse(ans["content"]));
               chat.start_chat(short_info);
               break;
             }
@@ -991,11 +1029,13 @@
               const chat_info = Object.assign(new ChatsUserWithInfo(), JSON.parse(ans["content"]));
               chat.chat_id = chat_info.chat_id;
               sidebar.addChat(chat_info);
+              break;
             }
             case "SEND_MESSAGE" /* SEND_MESSAGE */: {
               const message = Object.assign(new ChatMessages(), JSON.parse(ans["content"]));
               message.content = Object.assign(new MessageContent(), message.content);
-              chat.add_message(message.content.text_content);
+              chat.add_message(message);
+              break;
             }
           }
         } catch (error) {

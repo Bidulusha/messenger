@@ -70,13 +70,14 @@ impl From<Row> for ChatMessage {
 
 
 /*              From ChatsUserWith Info to ChatsInfo */
-// impl From<ChatsUserWithInfo> for ChatsInfo{
-//     fn from(item: ChatsUserWithInfo) -> Self {
-//         ChatsInfo { 
-//             id: item.id, 
-//             avatar: item., 
-//             name: item.get("name"), 
-//             members_id: item.get("members_id") 
-//         }
-//     }
-// }
+impl From<UsersInfo> for ChatsUserWithInfo{
+    fn from(item: UsersInfo) -> Self {
+        ChatsUserWithInfo { 
+            chat_id: item.id, 
+            chat_name: item.login, 
+            chat_avatar: item.avatar, 
+            with_user: Some(item.id), 
+            members_id: vec![]
+        } 
+    }
+}

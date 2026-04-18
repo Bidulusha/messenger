@@ -78,10 +78,11 @@ async fn main() -> Result<(), Error>{
     
     // Create app with state
     let cors = CorsLayer::new()
-        .allow_origin(AllowOrigin::exact("http://localhost:3000".parse().unwrap()))
+        // .allow_origin(AllowOrigin::exact("http://localhost:3000".parse().unwrap()))
+        .allow_origin(Any)
         .allow_methods([Method::GET, Method::POST, Method::OPTIONS]) // Разрешаем OPTIONS
-        .allow_headers([http::header::CONTENT_TYPE, http::header::AUTHORIZATION]) // Разрешаем нужные заголовки
-        .allow_credentials(true); // Если используете cookies/сессии
+        .allow_headers([http::header::CONTENT_TYPE, http::header::AUTHORIZATION]); // Разрешаем нужные заголовки
+        // .allow_credentials(true); // Если используете cookies/сессии
     
     let app = create_router(Arc::new(state)).layer(cors);
     let listener = tokio::net::TcpListener::bind("0.0.0.0:8080").await.unwrap();

@@ -1,5 +1,6 @@
 :root {
     --body-input__margin: 0.6rem;
+    --border-radius-messages: 0.6rem;
 }
 
 .chat {
@@ -14,7 +15,6 @@
     display: flex;
     width: 100%;
 
-    overflow: hidden;
     border-bottom: 1px solid black;
 }
 
@@ -22,44 +22,78 @@
     display: flex;
     flex-direction: column;
 
-    justify-content: end;
-
     height: 100%;
     width: 100%;
 }
 
-.chat__body-input {
+.chat__input {
     display: flex;
+    flex-direction: row;
     justify-content: center;
+    align-items: end;
+
+    border-radius: 0.6rem;
+    border: 1px solid #d0d0d0;
+    padding: 0.4rem;
+
+    width: 80%;
 
     margin: var(--body-input__margin);
+    margin-left: auto;
+    margin-right: auto;
 }
 
-.chat__body-input__button {
+.chat__input-button {
+    height: fit-content;
     margin-left: var(--body-input__margin);
 }
 
-.chat__body-input__text{
-    height: 1rem;
-    width: 80%;
+.chat__input-text{
+    max-height: 16rem;
+    width: 100%;
+    
+    overflow: hidden;
+    overflow-y: scroll;
+}
+
+.chat__input-text:focus {
+    outline: none;
 }
 
 .chat__body-text {
-    display: flex;
-    flex-direction: column;
-
-    justify-content: center;
-    align-items: center;
+    height: 100%;
+    overflow-y: scroll;
 }
 
 .chat__body-text__message-container {
     width: 80%;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+.message-text {
+    width: fit-content;
+    margin: 1rem;
+
+    padding: 0.8rem;
+    border-radius: var(--border-radius-messages);
 }
 
 .chat__body-text__sended_message {
+    background-color: greenyellow;
+    
     text-align: right;
+    
+    margin-right: 0;
+    margin-left: auto;
 }
 
-.chat__body-text__recived_message {
-    text-align: right;
+.chat__body-text__recieved_message {
+    width: fit-content;
+    margin: 1em 0;
+
+    background-color: aqua;
+    border-radius: var(--border-radius-messages);
+    margin-left: 0;
+    margin-right: auto;
 }
