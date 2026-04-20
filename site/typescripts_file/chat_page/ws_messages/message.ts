@@ -1,6 +1,7 @@
 export enum MessageType {
     AUTH_CHECK = "AUTH_CHECK",
     GET_CHATS = "GET_CHATS",
+    USER_SHORT_INFO = "USER_SHORT_INFO",
     OPEN_CHAT = "OPEN_CHAT",
     SEND_MESSAGE = "SEND_MESSAGE",
     START_CHAT = "START_CHAT",

@@ -1,0 +1,9 @@
+.sidebar__user-info {
+    display: flex;
+}
+
+.sidebar__user-info__header-avatar img {
+    width: 2rem;
+    height: 2rem;
+    border-radius: 50%;
+}

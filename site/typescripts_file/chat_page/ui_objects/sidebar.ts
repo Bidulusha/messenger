@@ -1,13 +1,23 @@
+import { AVATARS_URL } from "../../constants";
 import { ChatsInfo } from "../objects/chat_info";
 import { ChatsUserWithInfo } from "../objects/chats_user_with_info";
+import { UserShortInfo } from "../objects/user_info";
 import { WebsocketManager } from "../websocket_connection";
 import { ChatUI } from "./chat";
 import { ObjectUI } from "./object_ui";
 
 export class SidebarUI implements ObjectUI {
+    // HTML elements
     sidebarDiv: HTMLDivElement = document.querySelector("#main_sidebar")!; 
-    
+    userInfoDiv: HTMLDivElement = document.querySelector(".sidebar__user-info")!;
+    userInfoAvatarImage: HTMLImageElement = this.userInfoDiv.querySelector("img")!;
+    userInfoNameDiv: HTMLDivElement = this.userInfoDiv.querySelector(".sidebar__user-info__header-info__name")!;
+
+
+    // WS manager
     ws: WebsocketManager;
+    
+    // Chat info
     currentChat: ChatsInfo;
 
     constructor(ws: WebsocketManager){
@@ -19,6 +29,11 @@ export class SidebarUI implements ObjectUI {
         chats_info.forEach((chat, index) => {
             this.addChat(chat);
         })
+    }
+
+    setUserInfo(user_info: UserShortInfo) {
+        this.userInfoAvatarImage.src = AVATARS_URL + user_info.avatar;
+        this.userInfoNameDiv.innerText = user_info.login;
     }
 
     addChat(chat: ChatsUserWithInfo){
@@ -53,6 +68,8 @@ export class SidebarUI implements ObjectUI {
         chat_info_button.append(chat_info_text);
         this.sidebarDiv.append(chat_info_button);
     }
+
+    
 
     show(){
         

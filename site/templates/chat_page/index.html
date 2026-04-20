@@ -4,15 +4,23 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link href="/static/styles/base_style.css" rel="stylesheet">
+    <link href="/static/styles/chat_page/md.css" rel="stylesheet">
     <link href="/static/styles/chat_page/chat.css" rel="stylesheet">
     <link href="/static/styles/chat_page/style.css" rel="stylesheet">
     <link href="/static/styles/chat_page/pop_up.css" rel="stylesheet">
     <link href="/static/styles/chat_page/chat_info.css" rel="stylesheet">
     <link href="/static/styles/chat_page/sidebar.css" rel="stylesheet">
+    <link href="/static/styles/chat_page/sidebar_user_info.css" rel="stylesheet">
+
+    <!-- TEMPRORARY SOLUTION -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:ital,wght@0,100..800;1,100..800&display=swap" rel="stylesheet">
     <title>Мессенджер</title>
 </head>
 <body>
     <main>
+        <!--                        POP UP                          -->
         <!-- pop up start new chat -->
         <div id="pop_up_start_new_chat" class="pop_up">
             <div class = "pop_up__background"></div>
@@ -22,16 +30,19 @@
                     <input class="pop_up__form-login_input" placeholder="Логин пользователя">
                     <button class="pop_up__form-find_button">Найти</button>
                 </div>
-                <!-- <div class="pop_up__window_manager">
-                    <button class="pop_up__window_manager_close_button">x</button>
-                </div> -->
             </div>
         </div>
 
+        <!--                         MAIN                           -->
         <!--    Sidebar     -->
         <div id="main_sidebar" class="sidebar">
             <button id="sidebar__user-info" class="sidebar__user-info sidebar-element">
-                
+                <div class="sidebar__user-info__header-avatar">
+                    <img src="/static/images/avatars/ph.png">
+                </div>
+                <div class="sidebar__user-info__header-info">
+                    <div class="sidebar__user-info__header-info__name"></div>
+                </div>
             </button>
             <button id="sidebar__create-chat" class="sidebar__create-chat sidebar-element">
                 <div>Начать новый чат</div>

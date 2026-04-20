@@ -18,6 +18,7 @@ use shared_lib::database::{ChatMessage, ChatsInfo, ChatsUserWithInfo, MessageCon
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
 pub enum MessageType {
     AUTH_CHECK,
+    USER_SHORT_INFO,
     GET_CHATS,
     START_CHAT,
     OPEN_CHAT,
@@ -34,6 +35,13 @@ pub struct User {
     pub user_avatar: String,
     pub connection_info: SocketAddr,
     pub active_chat: Option<ChatsInfo>
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct UserShortInfo {
+    pub id: i32,
+    pub login: String,
+    pub avatar: String
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -71,6 +79,20 @@ impl UserMessage {
         return serde_json::to_string(&UserMessage {
             message_type: MessageType::AUTH_CHECK,
             content: AuthStatus::ACCESS_DENIED.into()
+        }).unwrap()
+    }
+
+    /*               INFO                */
+    pub fn user_short_info(user: &User) -> String {
+        return serde_json::to_string(&UserMessage {
+            message_type: MessageType::USER_SHORT_INFO,
+            content: serde_json::to_string(
+                &UserShortInfo {
+                    id: user.user_id,
+                    login: user.user_name.clone(),
+                    avatar: user.user_avatar.clone()
+                }
+            ).unwrap()
         }).unwrap()
     }
 

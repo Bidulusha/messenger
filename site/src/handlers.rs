@@ -35,16 +35,6 @@ where
 }
 
 
-/*          Main page            */
-// #[derive(Template)]
-// #[template(path = "main_page/index.html")]
-// struct MainPageTemplate {}
-
-// pub async fn main_page() -> impl IntoResponse {
-//     let _ = axum::response::Redirect::permanent("/chat");
-// }
-
-
 /*          Auth pages           */
 /* Sign in */
 // get

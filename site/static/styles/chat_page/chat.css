@@ -79,10 +79,13 @@
     border-radius: var(--border-radius-messages);
 }
 
+.message-text p {
+    padding: 0;
+    margin: 0;
+}
+
 .chat__body-text__sended_message {
     background-color: greenyellow;
-    
-    text-align: right;
     
     margin-right: 0;
     margin-left: auto;

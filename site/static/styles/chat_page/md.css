@@ -1,0 +1,6 @@
+.md-code-container pre {
+    font-family: "JetBrains Mono", monospace;
+    background-color: #474747;
+    color: #0fffff;
+    padding: 0.4rem;
+}

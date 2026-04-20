@@ -61,6 +61,14 @@ if (token != null && !Number.isNaN(user_id)) {
                         break;
                     }
 
+                    // Get user short info
+                    case MessageType.USER_SHORT_INFO: {
+                        const user_info: UserShortInfo = Object.assign(new UserShortInfo (),JSON.parse(ans["content"]));
+                        console.log(user_info);
+                        sidebar.setUserInfo(user_info);
+                        break;
+                    }
+
                     // Get chats
                     case MessageType.GET_CHATS: {
                         const chats: ChatsUserWithInfo[] = JSON.parse(ans["content"]);

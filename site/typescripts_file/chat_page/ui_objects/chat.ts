@@ -7,6 +7,7 @@ import { WebsocketManager } from "../websocket_connection";
 import { MessageContent, ChatMessages, SendMessage} from "../objects/chat_message";
 import { SidebarUI } from "./sidebar";
 import { Time } from "../objects/time";
+import { markdownToHtml } from "ts-markdown-parser";
 
 export class ChatUI implements ObjectUI {
     // Elements on page
@@ -42,6 +43,8 @@ export class ChatUI implements ObjectUI {
     set chat_id(value: number) { this.chat.id = value; }
     get chat_id() { return this.chat.id; } 
     
+    // Markdown options
+    md_options = { addCopyToClipboard: true, interactiveCheckboxes: false };
     
     first_message: boolean = false;
 
@@ -57,7 +60,7 @@ export class ChatUI implements ObjectUI {
             if (ev.keyCode == 13 && !ev.shiftKey) { 
                 ev.preventDefault();
                 this.send_message(); 
-            }
+            };
         });
     }
     
@@ -85,6 +88,9 @@ export class ChatUI implements ObjectUI {
 
     // Add message to page
     add_message(message: ChatMessages) {
+        const hmtlContent = markdownToHtml(message.content.text_content, this.md_options);
+        console.log(hmtlContent);
+
         const sended_message_container = document.createElement("div");
         sended_message_container.classList.add("chat__body-text__message-container");
         const sended_message_text = document.createElement("div");
@@ -94,7 +100,8 @@ export class ChatUI implements ObjectUI {
         else sended_message_text.classList.add("chat__body-text__recieved_message");
 
         sended_message_text.classList.add("message-text");
-        sended_message_text.innerText = message.content.text_content;
+        // sended_message_text.innerText = message.content.text_content;
+        sended_message_text.innerHTML = hmtlContent;
         
         sended_message_container.append(sended_message_text);
         this.chatBodyTextElement.append(sended_message_container);

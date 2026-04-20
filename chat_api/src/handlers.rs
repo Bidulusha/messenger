@@ -168,6 +168,7 @@ async fn handle_socket(mut socket: WebSocket, who: SocketAddr, state: Arc<AppSta
                                                     user.user_avatar = user_info[0].clone().avatar;
                                                     state.connections.lock().await.insert(user.user_id, tx.clone());
                                                     let _ = tx.send(Message::text(UserMessage::auth_access_allowed()));
+                                                    let _ = tx.send(Message::text(UserMessage::user_short_info(&user)));
                                                     drop(data);
                                                 }
                                                 else {
@@ -184,10 +185,6 @@ async fn handle_socket(mut socket: WebSocket, who: SocketAddr, state: Arc<AppSta
                                     let _ = tx.send(Message::text(UserMessage::auth_access_denied()));
                                     break;
                                 }
-                            }
-
-                            MessageType::CREATE_CHAT => {
-
                             }
 
                             // GET CHATS
@@ -261,6 +258,10 @@ async fn handle_socket(mut socket: WebSocket, who: SocketAddr, state: Arc<AppSta
                                     }
                                     Err(err) => {println!("{}", format!("Error getting chat message! Error {:?}", err).red())}
                                 }
+                            }
+
+                            _ => {
+                                println!("{}", format!("{:?}", data).purple());
                             }
                         }
 
