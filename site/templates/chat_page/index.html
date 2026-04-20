@@ -33,6 +33,18 @@
             </div>
         </div>
 
+        <!-- pop up start new group chat -->
+        <div id="pop_up_start_new_group_chat" class="pop_up">
+            <div class = "pop_up__background"></div>
+            <div class="pop_up__form-container">
+                <div class="pop_up__form">
+                    <h1>Найти пользователя</h1>
+                    <input class="pop_up__form-login_input" placeholder="Логин пользователя">
+                    <button class="pop_up__form-find_button">Найти</button>
+                </div>
+            </div>
+        </div>
+
         <!--                         MAIN                           -->
         <!--    Sidebar     -->
         <div id="main_sidebar" class="sidebar">
@@ -43,6 +55,9 @@
                 <div class="sidebar__user-info__header-info">
                     <div class="sidebar__user-info__header-info__name"></div>
                 </div>
+            </button>
+            <button id="sidebar__create-chat" class="sidebar__create-chat sidebar-element">
+                <div>Найти пользователя</div>
             </button>
             <button id="sidebar__create-chat" class="sidebar__create-chat sidebar-element">
                 <div>Начать новый чат</div>

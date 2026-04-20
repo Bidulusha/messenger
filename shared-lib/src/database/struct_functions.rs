@@ -28,7 +28,8 @@ impl From<Row> for ChatsUser {
         ChatsUser {
             id: item.get("id"),
             chat_id: item.get("chat_id"),
-            with: item.get("with")
+            with: item.get("with"),
+            last_change: item.get("last_change")
         }
     }
 }

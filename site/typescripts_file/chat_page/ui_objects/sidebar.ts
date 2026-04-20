@@ -20,6 +20,7 @@ export class SidebarUI implements ObjectUI {
     // Chat info
     currentChat: ChatsInfo;
 
+
     constructor(ws: WebsocketManager){
         this.ws = ws;
     }
@@ -69,7 +70,13 @@ export class SidebarUI implements ObjectUI {
         this.sidebarDiv.append(chat_info_button);
     }
 
-    
+    getMessageInChat(chat_id: number) {
+        console.log(chat_id);
+        const chat_info = document.querySelector(`#chat_${chat_id}_info`);
+        console.log(chat_info);
+        if (chat_info) this.sidebarDiv.children[1].after(chat_info);
+        
+    }
 
     show(){
         

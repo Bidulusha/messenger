@@ -3,4 +3,8 @@
     background-color: #474747;
     color: #0fffff;
     padding: 0.4rem;
+
+    overflow-wrap: break-word;
+    word-break: break-word;
+    white-space: pre-wrap;
 }

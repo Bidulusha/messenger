@@ -41,7 +41,10 @@ export class ChatUI implements ObjectUI {
     user_id: number;
     chat: ChatsInfo;
     set chat_id(value: number) { this.chat.id = value; }
-    get chat_id() { return this.chat.id; } 
+    get chat_id() { 
+        if (this.chat != undefined) return this.chat.id; 
+        else return -1;
+    } 
     
     // Markdown options
     md_options = { addCopyToClipboard: true, interactiveCheckboxes: false };

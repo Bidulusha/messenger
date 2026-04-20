@@ -172,7 +172,8 @@ impl ChatsUser {
             create table if not exists public.chats_user_{user_id} (\
                 id integer NOT NULL GENERATED ALWAYS AS IDENTITY (INCREMENT 1 START 1 MINVALUE 1 MAXVALUE 2147483647 CACHE 1),\
                 chat_id integer NOT NULL references chats_info(id),\
-                with_user integer references users_info(id)
+                with_user integer references users_info(id), \
+                last_change time not null \
             );"), &[]).await {
                 Ok(_) => {println!("{}", format!("Create chats_user_{} table!", user_id).green())}
                 Err(err) => {println!("{}", format!("Cannot create chats_user_{} table! Error: {:?}", user_id, err).red())}
@@ -208,10 +209,12 @@ impl ChatsUser {
                     ELSE ui.avatar \
                 END AS chat_avatar, \
                 cu.with_user, \
-                COALESCE(ci.members_id, ARRAY[]::integer[]) AS members_id \
+                COALESCE(ci.members_id, ARRAY[]::integer[]) AS members_id, \
+                cu.last_change \
             FROM chats_user_{} cu \
             LEFT JOIN chats_info ci ON cu.chat_id = ci.id \
             LEFT JOIN users_info ui ON cu.with_user = ui.id \
+            ORDER BY cu.last_change \
         ", user_id), &[]
         ).await {
             Ok(data) => {

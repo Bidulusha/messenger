@@ -43,7 +43,8 @@ pub struct UsersInfo {
 pub struct ChatsUser{
     pub id: i32,
     pub chat_id: i32,
-    pub with: Option<i32>
+    pub with: Option<i32>,
+    pub last_change: NaiveTime
 }
 
 // Chats info

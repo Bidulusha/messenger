@@ -2207,6 +2207,12 @@ ${element.content}
       chat_info_button.append(chat_info_text);
       this.sidebarDiv.append(chat_info_button);
     }
+    getMessageInChat(chat_id) {
+      console.log(chat_id);
+      const chat_info = document.querySelector(`#chat_${chat_id}_info`);
+      console.log(chat_info);
+      if (chat_info) this.sidebarDiv.children[1].after(chat_info);
+    }
     show() {
     }
   };
@@ -3040,7 +3046,8 @@ ${element.content}
       this.chat.id = value;
     }
     get chat_id() {
-      return this.chat.id;
+      if (this.chat != void 0) return this.chat.id;
+      else return -1;
     }
     /*                  UI METHODS                */
     show() {
@@ -3213,7 +3220,9 @@ ${element.content}
             case "SEND_MESSAGE" /* SEND_MESSAGE */: {
               const message = Object.assign(new ChatMessages(), JSON.parse(ans["content"]));
               message.content = Object.assign(new MessageContent(), message.content);
+              console.log(message.id);
               if (message.id == chat.chat_id) chat.add_message(message);
+              sidebar.getMessageInChat(message.id);
               break;
             }
           }

@@ -121,7 +121,9 @@ if (token != null && !Number.isNaN(user_id)) {
                         const message: ChatMessages = Object.assign(new ChatMessages(), JSON.parse(ans["content"]));
                         message.content = Object.assign(new MessageContent(), message.content);
 
+                        console.log(message.id);
                         if (message.id == chat.chat_id) chat.add_message(message);
+                        sidebar.getMessageInChat(message.id);
 
                         break;
                     }
