@@ -89,7 +89,6 @@ export class ChatUI implements ObjectUI {
     // Add message to page
     add_message(message: ChatMessages) {
         const hmtlContent = markdownToHtml(message.content.text_content, this.md_options);
-        console.log(hmtlContent);
 
         const sended_message_container = document.createElement("div");
         sended_message_container.classList.add("chat__body-text__message-container");

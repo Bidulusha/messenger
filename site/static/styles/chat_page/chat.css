@@ -62,21 +62,33 @@
 
 .chat__body-text {
     height: 100%;
+    width: 100%;
+
     overflow-y: scroll;
+    overflow-x: hidden;
 }
 
 .chat__body-text__message-container {
-    width: 80%;
     margin-left: auto;
     margin-right: auto;
+    
+    width: 80%;
 }
 
 .message-text {
-    width: fit-content;
     margin: 1rem;
 
     padding: 0.8rem;
     border-radius: var(--border-radius-messages);
+
+    overflow-wrap: break-word;
+    word-break: break-word;
+    white-space: normal;
+}
+
+.message-text { 
+    width: fit-content;
+    max-width: 80%;
 }
 
 .message-text p {
@@ -92,7 +104,6 @@
 }
 
 .chat__body-text__recieved_message {
-    width: fit-content;
     margin: 1em 0;
 
     background-color: aqua;

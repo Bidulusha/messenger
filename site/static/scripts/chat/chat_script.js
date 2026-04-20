@@ -3061,7 +3061,6 @@ ${element.content}
     // Add message to page
     add_message(message) {
       const hmtlContent = (0, import_ts_markdown_parser.markdownToHtml)(message.content.text_content, this.md_options);
-      console.log(hmtlContent);
       const sended_message_container = document.createElement("div");
       sended_message_container.classList.add("chat__body-text__message-container");
       const sended_message_text = document.createElement("div");
