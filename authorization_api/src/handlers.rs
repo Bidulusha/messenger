@@ -145,9 +145,11 @@ pub async fn check_token(
     raw_data: String
 ) -> Json<AuthAnswer>
 {
+    println!("{raw_data}");
     match serde_json::from_str::<TokenCheckAnswer>(&raw_data){
         Ok(data) => {
             let token_correct = ActiveSessions::check_token(&state.client, &data.user_id, &data.token).await;
+        
             if token_correct{
                 Json(AuthAnswer { 
                     status_code: AuthStatus::ACCESS_ALLOWED, 
@@ -156,6 +158,7 @@ pub async fn check_token(
                 })
             }
             else {
+                
                 Json(AuthAnswer { 
                     status_code: AuthStatus::ACCESS_DENIED, 
                     user_id: -1, 

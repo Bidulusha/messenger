@@ -1,0 +1,1068 @@
+(() => {
+  // ../constants.ts
+  var PROTOCOL = "http://";
+  var DOMEN = "91.122.215.194";
+  var BASE_URL = PROTOCOL + DOMEN;
+  var WS_URL = "ws://" + DOMEN;
+  var STATIC_URL = "/static";
+  var AVATARS_URL = STATIC_URL + "/images/avatars/";
+  var AUTH_API_URL = BASE_URL + ":8081";
+  var CHAT_URL = BASE_URL + ":3000/chat";
+  var SIGN_IN_URL = BASE_URL + ":3000/sign_in";
+  var CHAT_WS_URL = WS_URL + ":8080/api/chat_ws";
+
+  // ui_objects/sidebar.ts
+  var SidebarUI = class {
+    constructor(ws) {
+      this.sidebarDiv = document.querySelector("#main_sidebar");
+      this.ws = ws;
+    }
+    setupChats(chats_info) {
+      console.log(chats_info);
+      chats_info.forEach((chat2, index) => {
+        this.addChat(chat2);
+      });
+    }
+    addChat(chat2) {
+      const chat_info_button = document.createElement("button");
+      chat_info_button.id = `chat_${chat2.chat_id}_info`;
+      chat_info_button.classList.add("chat__info");
+      chat_info_button.classList.add("sidebar-element");
+      chat_info_button.addEventListener("click", (ev) => {
+        this.ws.openChatMessage(chat2.chat_id);
+        this.currentChat = chat2.chat_id;
+      });
+      const chat_avatar_div = document.createElement("div");
+      const chat_avatar_img = document.createElement("img");
+      chat_avatar_img.src = `/static/images/avatars/${chat2.chat_avatar}`;
+      chat_avatar_div.append(chat_avatar_img);
+      const chat_info_text = document.createElement("div");
+      chat_info_text.classList.add("chat_info__text");
+      const chat_info_name = document.createElement("div");
+      chat_info_name.classList.add("chat__info-name");
+      chat_info_name.classList.add("line-limit-length");
+      chat_info_name.innerText = chat2.chat_name;
+      chat_info_text.append(chat_info_name);
+      chat_info_button.append(chat_info_text);
+      this.sidebarDiv.append(chat_info_button);
+    }
+    show() {
+    }
+  };
+
+  // ../node_modules/websocket-ts/dist/esm/src/backoff/exponentialbackoff.js
+  var ExponentialBackoff = class {
+    /**
+     * Creates a new ExponentialBackoff.
+     * @param base the base of the exponentiation
+     * @param expMax the maximum exponent, no bound if undefined
+     */
+    constructor(base, expMax) {
+      this._retries = 0;
+      if (!Number.isInteger(base) || base < 0) {
+        throw new Error("Base must be a positive integer or zero");
+      }
+      if (expMax !== void 0 && (!Number.isInteger(expMax) || expMax < 0)) {
+        throw new Error("ExpMax must be undefined, a positive integer, or zero");
+      }
+      this.base = base;
+      this.expMax = expMax;
+      this.i = 0;
+    }
+    get retries() {
+      return this._retries;
+    }
+    get current() {
+      return this.base * Math.pow(2, this.i);
+    }
+    next() {
+      this._retries++;
+      this.i = this.expMax === void 0 ? this.i + 1 : Math.min(this.i + 1, this.expMax);
+      return this.current;
+    }
+    reset() {
+      this._retries = 0;
+      this.i = 0;
+    }
+  };
+
+  // ../node_modules/websocket-ts/dist/esm/src/queue/array_queue.js
+  var ArrayQueue = class {
+    constructor() {
+      this.elements = [];
+    }
+    add(element) {
+      this.elements.push(element);
+    }
+    clear() {
+      this.elements.length = 0;
+    }
+    forEach(fn) {
+      this.elements.forEach(fn);
+    }
+    length() {
+      return this.elements.length;
+    }
+    isEmpty() {
+      return this.elements.length === 0;
+    }
+    peek() {
+      return this.elements[0];
+    }
+    read() {
+      return this.elements.shift();
+    }
+  };
+
+  // ../node_modules/websocket-ts/dist/esm/src/websocket_event.js
+  var WebsocketEvent = {
+    /** Fired when the connection is opened. */
+    open: "open",
+    /** Fired when the connection is closed. */
+    close: "close",
+    /** Fired when the connection has been closed because of an error, such as when some data couldn't be sent. */
+    error: "error",
+    /** Fired when a message is received. */
+    message: "message",
+    /** Fired when the websocket tries to reconnect after a connection loss. */
+    retry: "retry",
+    /** Fired when the websocket successfully reconnects after a connection loss. */
+    reconnect: "reconnect"
+  };
+
+  // ../node_modules/websocket-ts/dist/esm/src/websocket.js
+  var Websocket = class {
+    /**
+     * Creates a new websocket.
+     *
+     * @param url to connect to, or a function that returns a URL.
+     * @param protocols optional protocols to use.
+     * @param options optional options to use.
+     */
+    constructor(url, protocols, options) {
+      var _a, _b, _c, _d, _e, _f, _g, _h, _j, _k, _l, _m, _o, _p, _q;
+      this._closedByUser = false;
+      this.handleOpenEvent = (event) => this.handleEvent(WebsocketEvent.open, event);
+      this.handleErrorEvent = (event) => this.handleEvent(WebsocketEvent.error, event);
+      this.handleCloseEvent = (event) => this.handleEvent(WebsocketEvent.close, event);
+      this.handleMessageEvent = (event) => this.handleEvent(WebsocketEvent.message, event);
+      this._urlProvider = url;
+      this._protocols = protocols;
+      this._options = {
+        buffer: options === null || options === void 0 ? void 0 : options.buffer,
+        retry: {
+          maxRetries: (_a = options === null || options === void 0 ? void 0 : options.retry) === null || _a === void 0 ? void 0 : _a.maxRetries,
+          instantReconnect: (_b = options === null || options === void 0 ? void 0 : options.retry) === null || _b === void 0 ? void 0 : _b.instantReconnect,
+          backoff: (_c = options === null || options === void 0 ? void 0 : options.retry) === null || _c === void 0 ? void 0 : _c.backoff
+        },
+        listeners: {
+          open: [...(_e = (_d = options === null || options === void 0 ? void 0 : options.listeners) === null || _d === void 0 ? void 0 : _d.open) !== null && _e !== void 0 ? _e : []],
+          close: [...(_g = (_f = options === null || options === void 0 ? void 0 : options.listeners) === null || _f === void 0 ? void 0 : _f.close) !== null && _g !== void 0 ? _g : []],
+          error: [...(_j = (_h = options === null || options === void 0 ? void 0 : options.listeners) === null || _h === void 0 ? void 0 : _h.error) !== null && _j !== void 0 ? _j : []],
+          message: [...(_l = (_k = options === null || options === void 0 ? void 0 : options.listeners) === null || _k === void 0 ? void 0 : _k.message) !== null && _l !== void 0 ? _l : []],
+          retry: [...(_o = (_m = options === null || options === void 0 ? void 0 : options.listeners) === null || _m === void 0 ? void 0 : _m.retry) !== null && _o !== void 0 ? _o : []],
+          reconnect: [...(_q = (_p = options === null || options === void 0 ? void 0 : options.listeners) === null || _p === void 0 ? void 0 : _p.reconnect) !== null && _q !== void 0 ? _q : []]
+        }
+      };
+      this._underlyingWebsocket = this.tryConnect();
+    }
+    /**
+     * Getter for the url.
+     *
+     * @return the url.
+     */
+    get url() {
+      return this._url;
+    }
+    /**
+     * Getter for the protocols.
+     *
+     * @return the protocols, or undefined if none were provided.
+     */
+    get protocols() {
+      return this._protocols;
+    }
+    /**
+     * Getter for the buffer.
+     *
+     * @return the buffer, or undefined if none was provided.
+     */
+    get buffer() {
+      return this._options.buffer;
+    }
+    /**
+     * Getter for the maxRetries.
+     *
+     * @return the maxRetries, or undefined if none was provided (no limit).
+     */
+    get maxRetries() {
+      return this._options.retry.maxRetries;
+    }
+    /**
+     * Getter for the instantReconnect.
+     *
+     * @return the instantReconnect, or undefined if none was provided.
+     */
+    get instantReconnect() {
+      return this._options.retry.instantReconnect;
+    }
+    /**
+     * Getter for the backoff.
+     *
+     * @return the backoff, or undefined if none was provided.
+     */
+    get backoff() {
+      return this._options.retry.backoff;
+    }
+    /**
+     * Whether the websocket was closed by the user. A websocket is closed by the user by calling close().
+     *
+     * @return true if the websocket was closed by the user, false otherwise.
+     */
+    get closedByUser() {
+      return this._closedByUser;
+    }
+    /**
+     * Getter for the last 'open' event, e.g. the last time the websocket was connected.
+     *
+     * @return the last 'open' event, or undefined if the websocket was never connected.
+     */
+    get lastConnection() {
+      return this._lastConnection;
+    }
+    /**
+     * Getter for the underlying websocket. This can be used to access the browser's native websocket directly.
+     *
+     * @see https://developer.mozilla.org/en-US/docs/Web/API/WebSocket
+     * @return the underlying websocket.
+     */
+    get underlyingWebsocket() {
+      return this._underlyingWebsocket;
+    }
+    /**
+     * Getter for the readyState of the underlying websocket.
+     *
+     * @see https://developer.mozilla.org/en-US/docs/Web/API/WebSocket/readyState
+     * @return the readyState of the underlying websocket.
+     */
+    get readyState() {
+      return this._underlyingWebsocket.readyState;
+    }
+    /**
+     * Getter for the bufferedAmount of the underlying websocket.
+     *
+     * @see https://developer.mozilla.org/en-US/docs/Web/API/WebSocket/bufferedAmount
+     * @return the bufferedAmount of the underlying websocket.
+     */
+    get bufferedAmount() {
+      return this._underlyingWebsocket.bufferedAmount;
+    }
+    /**
+     * Getter for the extensions of the underlying websocket.
+     *
+     * @see https://developer.mozilla.org/en-US/docs/Web/API/WebSocket/extensions
+     * @return the extensions of the underlying websocket.
+     */
+    get extensions() {
+      return this._underlyingWebsocket.extensions;
+    }
+    /**
+     * Getter for the binaryType of the underlying websocket.
+     *
+     * @see https://developer.mozilla.org/en-US/docs/Web/API/WebSocket/binaryType
+     * @return the binaryType of the underlying websocket.
+     */
+    get binaryType() {
+      return this._underlyingWebsocket.binaryType;
+    }
+    /**
+     * Setter for the binaryType of the underlying websocket.
+     *
+     * @param value to set, 'blob' or 'arraybuffer'.
+     */
+    set binaryType(value) {
+      this._underlyingWebsocket.binaryType = value;
+    }
+    /**
+     * Sends data over the websocket.
+     *
+     * If the websocket is not connected and a buffer was provided on creation, the data will be added to the buffer.
+     * If no buffer was provided or the websocket was closed by the user, the data will be dropped.
+     *
+     * @see https://developer.mozilla.org/en-US/docs/Web/API/WebSocket/send
+     * @param data to send.
+     */
+    send(data) {
+      if (this.closedByUser)
+        return;
+      if (this._underlyingWebsocket.readyState === this._underlyingWebsocket.OPEN) {
+        this._underlyingWebsocket.send(data);
+      } else if (this.buffer !== void 0) {
+        this.buffer.add(data);
+      }
+    }
+    /**
+     * Close the websocket. No connection-retry will be attempted after this.
+     *
+     * @see https://developer.mozilla.org/en-US/docs/Web/API/WebSocket/close
+     * @param code optional close code.
+     * @param reason optional close reason.
+     */
+    close(code, reason) {
+      this.cancelScheduledConnectionRetry();
+      this._closedByUser = true;
+      this._underlyingWebsocket.close(code, reason);
+    }
+    /**
+     * Adds an event listener for the given event-type.
+     *
+     * @see https://developer.mozilla.org/en-US/docs/Web/API/EventTarget/addEventListener
+     * @param type of the event to add the listener for.
+     * @param listener to add.
+     * @param options to use when adding the listener.
+     */
+    addEventListener(type, listener, options) {
+      this._options.listeners[type].push({ listener, options });
+    }
+    /**
+     * Removes one or more event listener for the given event-type that match the given listener and options.
+     *
+     * @param type of the event to remove the listener for.
+     * @param listener to remove.
+     * @param options that were used when the listener was added.
+     */
+    removeEventListener(type, listener, options) {
+      const isListenerNotToBeRemoved = (l) => l.listener !== listener || l.options !== options;
+      this._options.listeners[type] = this._options.listeners[type].filter(isListenerNotToBeRemoved);
+    }
+    /**
+     * Creates a new browser-native websocket and connects it to the given URL with the given protocols
+     * and adds all event listeners to the browser-native websocket.
+     *
+     * @return the created browser-native websocket which is also stored in the '_underlyingWebsocket' property.
+     */
+    tryConnect() {
+      this._url = typeof this._urlProvider === "function" ? this._urlProvider() : this._urlProvider;
+      this._underlyingWebsocket = new WebSocket(this._url, this.protocols);
+      this._underlyingWebsocket.addEventListener(WebsocketEvent.open, this.handleOpenEvent);
+      this._underlyingWebsocket.addEventListener(WebsocketEvent.close, this.handleCloseEvent);
+      this._underlyingWebsocket.addEventListener(WebsocketEvent.error, this.handleErrorEvent);
+      this._underlyingWebsocket.addEventListener(WebsocketEvent.message, this.handleMessageEvent);
+      return this._underlyingWebsocket;
+    }
+    /**
+     * Removes all event listeners from the browser-native websocket and closes it.
+     */
+    clearWebsocket() {
+      this._underlyingWebsocket.removeEventListener(WebsocketEvent.open, this.handleOpenEvent);
+      this._underlyingWebsocket.removeEventListener(WebsocketEvent.close, this.handleCloseEvent);
+      this._underlyingWebsocket.removeEventListener(WebsocketEvent.error, this.handleErrorEvent);
+      this._underlyingWebsocket.removeEventListener(WebsocketEvent.message, this.handleMessageEvent);
+      this._underlyingWebsocket.close();
+    }
+    /**
+     * Dispatch an event to all listeners of the given event-type.
+     *
+     * @param type of the event to dispatch.
+     * @param event to dispatch.
+     */
+    dispatchEvent(type, event) {
+      const eventListeners = this._options.listeners[type];
+      const newEventListeners = [];
+      eventListeners.forEach(({ listener, options }) => {
+        listener(this, event);
+        if (options === void 0 || options.once === void 0 || !options.once) {
+          newEventListeners.push({ listener, options });
+        }
+      });
+      this._options.listeners[type] = newEventListeners;
+    }
+    /**
+     * Handles the given event by dispatching it to all listeners of the given event-type.
+     *
+     * @param type of the event to handle.
+     * @param event to handle.
+     */
+    handleEvent(type, event) {
+      switch (type) {
+        case WebsocketEvent.close:
+          this.dispatchEvent(type, event);
+          this.scheduleConnectionRetryIfNeeded();
+          break;
+        case WebsocketEvent.open:
+          if (this.backoff !== void 0 && this._lastConnection !== void 0) {
+            const detail = {
+              retries: this.backoff.retries,
+              lastConnection: new Date(this._lastConnection)
+            };
+            const event2 = new CustomEvent(WebsocketEvent.reconnect, {
+              detail
+            });
+            this.dispatchEvent(WebsocketEvent.reconnect, event2);
+            this.backoff.reset();
+          }
+          this._lastConnection = /* @__PURE__ */ new Date();
+          this.dispatchEvent(type, event);
+          this.sendBufferedData();
+          break;
+        case WebsocketEvent.retry:
+          this.dispatchEvent(type, event);
+          this.clearWebsocket();
+          this.tryConnect();
+          break;
+        default:
+          this.dispatchEvent(type, event);
+          break;
+      }
+    }
+    /**
+     * Sends buffered data if there is a buffer defined.
+     */
+    sendBufferedData() {
+      if (this.buffer === void 0) {
+        return;
+      }
+      for (let ele = this.buffer.read(); ele !== void 0; ele = this.buffer.read()) {
+        this.send(ele);
+      }
+    }
+    /**
+     * Schedules a connection-retry if there is a backoff defined and the websocket was not closed by the user.
+     */
+    scheduleConnectionRetryIfNeeded() {
+      if (this.closedByUser) {
+        return;
+      }
+      if (this.backoff === void 0) {
+        return;
+      }
+      const handleRetryEvent = (detail) => {
+        const event = new CustomEvent(WebsocketEvent.retry, { detail });
+        this.handleEvent(WebsocketEvent.retry, event);
+      };
+      const retryEventDetail = {
+        backoff: this._options.retry.instantReconnect === true ? 0 : this.backoff.next(),
+        retries: this._options.retry.instantReconnect === true ? 0 : this.backoff.retries,
+        lastConnection: this._lastConnection
+      };
+      if (this._options.retry.maxRetries === void 0 || retryEventDetail.retries <= this._options.retry.maxRetries) {
+        this.retryTimeout = globalThis.setTimeout(() => handleRetryEvent(retryEventDetail), retryEventDetail.backoff);
+      }
+    }
+    /**
+     * Cancels the scheduled connection-retry, if there is one.
+     */
+    cancelScheduledConnectionRetry() {
+      globalThis.clearTimeout(this.retryTimeout);
+    }
+  };
+
+  // ../node_modules/websocket-ts/dist/esm/src/websocket_builder.js
+  var WebsocketBuilder = class {
+    /**
+     * Creates a new WebsocketBuilder.
+     *
+     * @param url the url to connect to, or a function that returns a URL
+     */
+    constructor(url) {
+      this._url = url;
+    }
+    /**
+     * Getter for the url.
+     *
+     * @returns the url or url provider
+     */
+    get url() {
+      return this._url;
+    }
+    /**
+     * Adds protocols to the websocket. Subsequent calls to this method will override the previously set protocols.
+     *
+     * @param protocols the protocols to add
+     */
+    withProtocols(protocols) {
+      this._protocols = protocols;
+      return this;
+    }
+    /**
+     * Getter for the protocols.
+     *
+     * @returns the protocols, undefined if no protocols have been set
+     */
+    get protocols() {
+      return this._protocols;
+    }
+    /**
+     * Sets the maximum number of retries before giving up. No limit if undefined.
+     *
+     * @param maxRetries the maximum number of retries before giving up
+     */
+    withMaxRetries(maxRetries) {
+      var _a;
+      this._options = Object.assign(Object.assign({}, this._options), { retry: Object.assign(Object.assign({}, (_a = this._options) === null || _a === void 0 ? void 0 : _a.retry), { maxRetries }) });
+      return this;
+    }
+    /**
+     * Getter for the maximum number of retries before giving up.
+     *
+     * @returns the maximum number of retries before giving up, undefined if no maximum has been set
+     */
+    get maxRetries() {
+      var _a, _b;
+      return (_b = (_a = this._options) === null || _a === void 0 ? void 0 : _a.retry) === null || _b === void 0 ? void 0 : _b.maxRetries;
+    }
+    /**
+     * Sets whether to reconnect immediately after a connection has been lost, ignoring the backoff strategy for the first retry.
+     *
+     * @param instantReconnect whether to reconnect immediately after a connection has been lost
+     */
+    withInstantReconnect(instantReconnect) {
+      var _a;
+      this._options = Object.assign(Object.assign({}, this._options), { retry: Object.assign(Object.assign({}, (_a = this._options) === null || _a === void 0 ? void 0 : _a.retry), { instantReconnect }) });
+      return this;
+    }
+    /**
+     * Getter for whether to reconnect immediately after a connection has been lost, ignoring the backoff strategy for the first retry.
+     *
+     * @returns whether to reconnect immediately after a connection has been lost, undefined if no value has been set
+     */
+    get instantReconnect() {
+      var _a, _b;
+      return (_b = (_a = this._options) === null || _a === void 0 ? void 0 : _a.retry) === null || _b === void 0 ? void 0 : _b.instantReconnect;
+    }
+    /**
+     * Adds a backoff to the websocket. Subsequent calls to this method will override the previously set backoff.
+     *
+     * @param backoff the backoff to add
+     */
+    withBackoff(backoff) {
+      var _a;
+      this._options = Object.assign(Object.assign({}, this._options), { retry: Object.assign(Object.assign({}, (_a = this._options) === null || _a === void 0 ? void 0 : _a.retry), { backoff }) });
+      return this;
+    }
+    /**
+     * Getter for the backoff.
+     *
+     * @returns the backoff, undefined if no backoff has been set
+     */
+    get backoff() {
+      var _a, _b;
+      return (_b = (_a = this._options) === null || _a === void 0 ? void 0 : _a.retry) === null || _b === void 0 ? void 0 : _b.backoff;
+    }
+    /**
+     * Adds a buffer to the websocket. Subsequent calls to this method will override the previously set buffer.
+     *
+     * @param buffer the buffer to add
+     */
+    withBuffer(buffer) {
+      this._options = Object.assign(Object.assign({}, this._options), { buffer });
+      return this;
+    }
+    /**
+     * Getter for the buffer.
+     *
+     * @returns the buffer, undefined if no buffer has been set
+     */
+    get buffer() {
+      var _a;
+      return (_a = this._options) === null || _a === void 0 ? void 0 : _a.buffer;
+    }
+    /**
+     * Adds an 'open' event listener to the websocket. Subsequent calls to this method will add additional listeners that will be
+     * called in the order they were added.
+     *
+     * @param listener the listener to add
+     * @param options the listener options
+     */
+    onOpen(listener, options) {
+      this.addListener(WebsocketEvent.open, listener, options);
+      return this;
+    }
+    /**
+     * Adds an 'close' event listener to the websocket. Subsequent calls to this method will add additional listeners that will be
+     * called in the order they were added.
+     *
+     * @param listener the listener to add
+     * @param options the listener options
+     */
+    onClose(listener, options) {
+      this.addListener(WebsocketEvent.close, listener, options);
+      return this;
+    }
+    /**
+     * Adds an 'error' event listener to the websocket. Subsequent calls to this method will add additional listeners that will be
+     * called in the order they were added.
+     *
+     * @param listener the listener to add
+     * @param options the listener options
+     */
+    onError(listener, options) {
+      this.addListener(WebsocketEvent.error, listener, options);
+      return this;
+    }
+    /**
+     * Adds an 'message' event listener to the websocket. Subsequent calls to this method will add additional listeners that will be
+     * called in the order they were added.
+     *
+     * @param listener the listener to add
+     * @param options the listener options
+     */
+    onMessage(listener, options) {
+      this.addListener(WebsocketEvent.message, listener, options);
+      return this;
+    }
+    /**
+     * Adds an 'retry' event listener to the websocket. Subsequent calls to this method will add additional listeners that will be
+     * called in the order they were added.
+     *
+     * @param listener the listener to add
+     * @param options the listener options
+     */
+    onRetry(listener, options) {
+      this.addListener(WebsocketEvent.retry, listener, options);
+      return this;
+    }
+    /**
+     * Adds an 'reconnect' event listener to the websocket. Subsequent calls to this method will add additional listeners that will be
+     * called in the order they were added.
+     *
+     * @param listener the listener to add
+     * @param options the listener options
+     */
+    onReconnect(listener, options) {
+      this.addListener(WebsocketEvent.reconnect, listener, options);
+      return this;
+    }
+    /**
+     * Builds the websocket.
+     *
+     * @return a new websocket, with the set options
+     */
+    build() {
+      return new Websocket(this._url, this._protocols, this._options);
+    }
+    /**
+     * Adds an event listener to the options.
+     *
+     * @param event the event to add the listener to
+     * @param listener the listener to add
+     * @param options the listener options
+     */
+    addListener(event, listener, options) {
+      var _a, _b, _c, _d, _e, _f, _g, _h, _j, _k, _l, _m, _o, _p, _q, _r, _s, _t, _u, _v, _w;
+      this._options = Object.assign(Object.assign({}, this._options), { listeners: {
+        open: (_c = (_b = (_a = this._options) === null || _a === void 0 ? void 0 : _a.listeners) === null || _b === void 0 ? void 0 : _b.open) !== null && _c !== void 0 ? _c : [],
+        close: (_f = (_e = (_d = this._options) === null || _d === void 0 ? void 0 : _d.listeners) === null || _e === void 0 ? void 0 : _e.close) !== null && _f !== void 0 ? _f : [],
+        error: (_j = (_h = (_g = this._options) === null || _g === void 0 ? void 0 : _g.listeners) === null || _h === void 0 ? void 0 : _h.error) !== null && _j !== void 0 ? _j : [],
+        message: (_m = (_l = (_k = this._options) === null || _k === void 0 ? void 0 : _k.listeners) === null || _l === void 0 ? void 0 : _l.message) !== null && _m !== void 0 ? _m : [],
+        retry: (_q = (_p = (_o = this._options) === null || _o === void 0 ? void 0 : _o.listeners) === null || _p === void 0 ? void 0 : _p.retry) !== null && _q !== void 0 ? _q : [],
+        reconnect: (_t = (_s = (_r = this._options) === null || _r === void 0 ? void 0 : _r.listeners) === null || _s === void 0 ? void 0 : _s.reconnect) !== null && _t !== void 0 ? _t : [],
+        [event]: [
+          ...(_w = (_v = (_u = this._options) === null || _u === void 0 ? void 0 : _u.listeners) === null || _v === void 0 ? void 0 : _v[event]) !== null && _w !== void 0 ? _w : [],
+          { listener, options }
+        ]
+      } });
+      return this;
+    }
+  };
+
+  // ws_messages/message.ts
+  var AuthRequest = class {
+    constructor(user_id2, token2) {
+      this.user_id = user_id2;
+      this.token = token2;
+    }
+  };
+  var UserMessage = class {
+    constructor(type, content) {
+      this.message_type = type;
+      this.content = content;
+    }
+  };
+
+  // websocket_connection.ts
+  var WebsocketManager = class {
+    constructor() {
+      this.ws = new WebsocketBuilder(CHAT_WS_URL).withBuffer(new ArrayQueue()).withBackoff(new ExponentialBackoff(1e3, 6)).build();
+    }
+    /*              MESSAGES                */
+    // base message
+    sendMessage(message) {
+      this.ws.send(message);
+    }
+    // start chat message
+    startChatMessage(login) {
+      this.ws.send(
+        JSON.stringify(new UserMessage(
+          "START_CHAT" /* START_CHAT */,
+          login
+        ))
+      );
+    }
+    // Authorization message
+    authorizationMessage(user_id2, token2) {
+      this.ws.send(JSON.stringify(
+        new UserMessage(
+          "AUTH_CHECK" /* AUTH_CHECK */,
+          JSON.stringify(
+            new AuthRequest(
+              user_id2,
+              token2
+            )
+          )
+        )
+      ));
+    }
+    // Get chats message
+    getChatsMessage() {
+      this.ws.send(JSON.stringify(
+        new UserMessage(
+          "GET_CHATS" /* GET_CHATS */,
+          ""
+        )
+      ));
+    }
+    // Open chat message
+    openChatMessage(chat_id) {
+      this.ws.send(JSON.stringify(
+        new UserMessage(
+          "OPEN_CHAT" /* OPEN_CHAT */,
+          chat_id.toString()
+        )
+      ));
+    }
+    // Send message to user
+    sendChatMessage(message) {
+      this.ws.send(JSON.stringify(
+        new UserMessage(
+          "SEND_MESSAGE" /* SEND_MESSAGE */,
+          JSON.stringify(message)
+        )
+      ));
+    }
+    // Send fist message
+    sendChatFirstMessage(message) {
+      this.ws.send(JSON.stringify(
+        new UserMessage(
+          "START_CHAT" /* START_CHAT */,
+          JSON.stringify(message)
+        )
+      ));
+    }
+    /*              LISTENERS              */
+    addEventListeners(open, close, message, reconnect) {
+      this.ws.addEventListener(WebsocketEvent.open, open);
+      this.ws.addEventListener(WebsocketEvent.close, close);
+      this.ws.addEventListener(WebsocketEvent.message, message);
+      this.ws.addEventListener(WebsocketEvent.reconnect, reconnect);
+    }
+  };
+
+  // objects/chats_user_with_info.ts
+  var ChatsUserWithInfo = class {
+  };
+
+  // ui_objects/pop_up/start_new_chat.ts
+  var PopUpNewChatUI = class {
+    constructor(ws_manager2) {
+      this.popUpElement = document.querySelector("#pop_up_start_new_chat");
+      this.findUser = this.popUpElement.querySelector(".pop_up__form-find_button");
+      this.backgroundElement = this.popUpElement.querySelector(".pop_up__background");
+      this.inputElement = this.popUpElement.querySelector(".pop_up__form-login_input");
+      this.formContainerElement = this.popUpElement.querySelector(".pop_up__form-container");
+      this.backgroundElement.addEventListener("click", () => this.close());
+      this.findUser.addEventListener("click", () => {
+        ws_manager2.startChatMessage(this.inputElement.value);
+      });
+      this.inputElement.addEventListener("keypress", (ev) => {
+        if (ev.keyCode == 13 && !ev.shiftKey) {
+          ev.preventDefault();
+          ws_manager2.startChatMessage(this.inputElement.value);
+        }
+      });
+    }
+    show() {
+      this.popUpElement.style.display = "flex";
+    }
+    close() {
+      this.popUpElement.style.display = "none";
+      this.inputElement.value = "";
+    }
+  };
+
+  // objects/chat_info.ts
+  var ChatsInfo = class {
+    constructor(id, avatar, chat_name, members_id) {
+      this.id = id;
+      this.avatar = avatar;
+      this.chat_name = chat_name;
+      this.members_id = members_id;
+    }
+  };
+
+  // objects/chat_message.ts
+  var MessageContent = class {
+    constructor(answer_to, forwarded_from, text_content, photos_content, files) {
+      if (typeof answer_to != typeof text_content) {
+        this.answer_to = answer_to;
+        this.forwarded_from = forwarded_from;
+        this.text_content = text_content;
+        this.photos_content = photos_content;
+        this.files = files;
+      }
+    }
+  };
+  var ChatMessages = class {
+    constructor(id, who_sended, send_time, content) {
+      if (typeof id != typeof send_time) {
+        this.id = id;
+        this.who_sended = who_sended;
+        this.send_time = send_time.hmsTime;
+        this.content = content;
+      }
+    }
+  };
+  var SendMessage = class {
+    constructor(id_who, chat_id, what) {
+      this.id_who = id_who;
+      this.id_to = chat_id;
+      this.what = what;
+    }
+  };
+
+  // ui_objects/chat.ts
+  var ChatUI = class {
+    // Constructor
+    constructor(ws, sidebar2, user_id2) {
+      // Elements on page
+      this.chatElement = document.querySelector("#chat_body");
+      this.chatHeaderElement = this.chatElement.querySelector(".chat__header");
+      this.chatAvatarElement = this.chatHeaderElement.querySelector(".chat__header-avatar");
+      this.chatAvatartImage = this.chatAvatarElement.querySelector("img");
+      this.chatInfoElement = this.chatHeaderElement.querySelector(".chat__header-info");
+      this.chatNameElement = this.chatHeaderElement.querySelector(".chat__header-info__name");
+      this.chatBodyElement = this.chatElement.querySelector(".chat__body");
+      this.chatBodyTextElement = this.chatBodyElement.querySelector(".chat__body-text");
+      this.chatInputElement = this.chatElement.querySelector(".chat__input");
+      this.chatInputField = this.chatInputElement.querySelector(".chat__input-text");
+      this.chatButtonSend = this.chatInputElement.querySelector(".chat__input-button");
+      // Input element charatresitics
+      this.input_base_height = this.chatInputField.scrollHeight;
+      this.first_message = false;
+      this.ws = ws;
+      this.user_id = user_id2;
+      this.close();
+      this.chatButtonSend.addEventListener("click", () => this.send_message());
+      this.chatInputElement.addEventListener("keypress", (ev) => {
+        if (ev.keyCode == 13 && !ev.shiftKey) {
+          ev.preventDefault();
+          this.send_message();
+        }
+      });
+    }
+    // Set chat_id
+    set chat_id(value) {
+      this._chat_id = value;
+    }
+    // Add message to page
+    add_message(message) {
+      const sended_message_container = document.createElement("div");
+      sended_message_container.classList.add("chat__body-text__message-container");
+      const sended_message_text = document.createElement("div");
+      if (message.who_sended == this.user_id)
+        sended_message_text.classList.add("chat__body-text__sended_message");
+      else sended_message_text.classList.add("chat__body-text__recieved_message");
+      sended_message_text.classList.add("message-text");
+      sended_message_text.innerText = message.content.text_content;
+      sended_message_container.append(sended_message_text);
+      this.chatBodyTextElement.append(sended_message_container);
+    }
+    // Add header
+    add_header(login, avatar) {
+      this.chatNameElement.innerText = login;
+      this.chatAvatartImage.style.display = "block";
+      this.chatAvatartImage.src = AVATARS_URL + avatar;
+    }
+    add_message_string(message) {
+      const sended_message_container = document.createElement("div");
+      sended_message_container.classList.add("chat__body-text__message-container");
+      const sended_message_text = document.createElement("div");
+      sended_message_text.classList.add("chat__body-text__sended_message");
+      sended_message_text.classList.add("message-text");
+      sended_message_text.innerText = message;
+      sended_message_container.append(sended_message_text);
+      this.chatBodyTextElement.append(sended_message_container);
+    }
+    show() {
+      this.chatElement.style.display = "flex";
+      this.chatBodyTextElement.scroll(0, this.chatBodyTextElement.scrollHeight);
+    }
+    close() {
+      this.chatBodyTextElement.innerHTML = "";
+      this.chatElement.style.display = "none";
+    }
+    open_chat(chat_id, messages) {
+      this.close();
+      this._chat_id = chat_id;
+      messages.forEach((message, ind) => {
+        this.add_message(message);
+      });
+      this.show();
+    }
+    start_chat(user_info) {
+      this.close();
+      this.first_message = true;
+      this.user_with_chat_id = user_info.chat_id;
+      this.chat = new ChatsInfo(
+        user_info.chat_id,
+        user_info.chat_avatar,
+        user_info.chat_name,
+        user_info.members_id
+      );
+      console.log(this.chat);
+      this.show();
+      this.add_header(user_info.chat_name, user_info.chat_avatar);
+    }
+    send_message() {
+      if (this.chatInputField.innerText == "") {
+        alert("\u0422\u0435\u043A\u0441\u0442 \u043D\u0435 \u043C\u043E\u0436\u0435\u0442 \u0431\u044B\u0442\u044C \u043F\u0443\u0441\u0442\u044B\u043C!");
+        return;
+      }
+      if (this.first_message) {
+        this.first_message = false;
+        this.ws.sendChatFirstMessage(
+          new SendMessage(
+            this.user_id,
+            this.user_with_chat_id,
+            new MessageContent(
+              -1,
+              -1,
+              this.chatInputField.innerText,
+              [""],
+              [""]
+            )
+          )
+        );
+      } else {
+        this.ws.sendChatMessage(
+          new SendMessage(
+            this.user_id,
+            this._chat_id,
+            new MessageContent(
+              -1,
+              -1,
+              this.chatInputField.innerText,
+              [""],
+              [""]
+            )
+          )
+        );
+      }
+      this.add_message_string(this.chatInputField.innerText);
+      this.chatInputField.innerText = "";
+      this.chatBodyTextElement.scroll(0, this.chatBodyTextElement.scrollHeight);
+    }
+  };
+
+  // index.ts
+  var user_id = parseInt(localStorage.getItem("user_id"));
+  var token = localStorage.getItem("access_token");
+  var ws_manager = new WebsocketManager();
+  var sidebar = new SidebarUI(ws_manager);
+  var pop_up_new_chat = new PopUpNewChatUI(ws_manager);
+  var chat = new ChatUI(ws_manager, sidebar, user_id);
+  var initialized = false;
+  if (token != null && !Number.isNaN(user_id)) {
+    ws_manager.addEventListeners(
+      // On open
+      async () => {
+        console.log("Open connection!");
+        ws_manager.authorizationMessage(user_id, token);
+      },
+      // On close 
+      async () => {
+        console.log("Close connection!");
+        initialized = false;
+      },
+      // On message
+      async (i, ev) => {
+        try {
+          const ans = JSON.parse(ev.data);
+          switch (ans["message_type"]) {
+            // Auth check
+            case "AUTH_CHECK" /* AUTH_CHECK */: {
+              if (ans["content"] == "ACCESS_DENIED") {
+                localStorage.removeItem("access_token");
+                localStorage.removeItem("user_id");
+                window.location.replace("/sign_in");
+              } else {
+                console.log("Access to user allowed!");
+                if (!initialized) {
+                  await ws_manager.getChatsMessage();
+                  initialized = true;
+                }
+              }
+              break;
+            }
+            // Get chats
+            case "GET_CHATS" /* GET_CHATS */: {
+              const chats = JSON.parse(ans["content"]);
+              chats.forEach((chat2, index) => {
+                chat2 = Object.assign(new ChatsUserWithInfo(), chat2);
+              });
+              sidebar.setupChats(chats);
+              break;
+            }
+            case "START_CHAT" /* START_CHAT */: {
+              if (ans["content"] == "USER_NOT_FOUND") {
+                alert("\u041F\u043E\u043B\u044C\u0437\u043E\u0432\u0430\u0442\u0435\u043B\u044C \u043D\u0435 \u0441\u0443\u0449\u0435\u0441\u0442\u0432\u0443\u0435\u0442!");
+                break;
+              }
+              pop_up_new_chat.close();
+              const short_info = Object.assign(new ChatsUserWithInfo(), JSON.parse(ans["content"]));
+              chat.start_chat(short_info);
+              break;
+            }
+            case "OPEN_CHAT" /* OPEN_CHAT */: {
+              if (ans["content"] == "CHAT_NOT_FOUND") {
+                alert("\u0427\u0430\u0442\u0430 \u043D\u0435 \u0441\u0443\u0449\u0435\u0441\u0442\u0432\u0443\u0435\u0442!");
+                break;
+              }
+              const chat_messages = JSON.parse(ans["content"]);
+              chat_messages.forEach((message, ind) => {
+                message = Object.assign(new ChatMessages(), message);
+              });
+              chat.open_chat(sidebar.currentChat, chat_messages);
+              break;
+            }
+            case "CREATE_CHAT" /* CREATE_CHAT */: {
+              const chat_info = Object.assign(new ChatsUserWithInfo(), JSON.parse(ans["content"]));
+              chat.chat_id = chat_info.chat_id;
+              sidebar.addChat(chat_info);
+              break;
+            }
+            case "SEND_MESSAGE" /* SEND_MESSAGE */: {
+              const message = Object.assign(new ChatMessages(), JSON.parse(ans["content"]));
+              message.content = Object.assign(new MessageContent(), message.content);
+              chat.add_message(message);
+              break;
+            }
+          }
+        } catch (error) {
+          console.log("Server message: ", ev.data);
+        }
+      },
+      () => {
+        console.log("recconect");
+      }
+    );
+    const create_new_chat_button = document.querySelector("#sidebar__create-chat");
+    create_new_chat_button?.addEventListener("click", (event) => {
+      pop_up_new_chat.show();
+    });
+  } else {
+    localStorage.removeItem("access_token");
+    localStorage.removeItem("user_id");
+    window.location.replace(SIGN_IN_URL);
+  }
+})();
