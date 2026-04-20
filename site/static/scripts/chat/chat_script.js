@@ -790,7 +790,7 @@
         ws_manager2.startChatMessage(this.inputElement.value);
       });
       this.inputElement.addEventListener("keypress", (ev) => {
-        if (ev.keyCode == 13 && !ev.shiftKey) {
+        if (ev.keyCode == 13) {
           ev.preventDefault();
           ws_manager2.startChatMessage(this.inputElement.value);
         }
@@ -936,7 +936,6 @@
         user_info.members_id
       );
       this.show();
-      this.add_header(user_info.chat_name, user_info.chat_avatar);
     }
     send_message() {
       if (this.chatInputField.innerText == "") {
@@ -990,7 +989,6 @@
       // On close 
       async () => {
         console.log("Close connection!");
-        initialized = false;
       },
       // On message
       async (i, ev) => {
@@ -1005,9 +1003,10 @@
                 window.location.replace("/sign_in");
               } else {
                 console.log("Access to user allowed!");
+                console.log(initialized);
                 if (!initialized) {
-                  await ws_manager.getChatsMessage();
                   initialized = true;
+                  await ws_manager.getChatsMessage();
                 }
               }
               break;
@@ -1052,7 +1051,7 @@
             case "SEND_MESSAGE" /* SEND_MESSAGE */: {
               const message = Object.assign(new ChatMessages(), JSON.parse(ans["content"]));
               message.content = Object.assign(new MessageContent(), message.content);
-              chat.add_message(message);
+              if (message.id == chat.chat_id) chat.add_message(message);
               break;
             }
           }

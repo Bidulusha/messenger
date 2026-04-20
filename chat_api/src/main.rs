@@ -4,6 +4,7 @@ mod route;
 mod handlers;
 mod message_from_user;
 mod websocket_messages;
+mod chat_functions;
 
 // std
 use std::{

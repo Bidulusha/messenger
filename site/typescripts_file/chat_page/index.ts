@@ -32,7 +32,7 @@ if (token != null && !Number.isNaN(user_id)) {
         },
 
         // On close 
-        async () => {console.log("Close connection!"); initialized = false;},
+        async () => {console.log("Close connection!");},
 
         // On message
         async (i: Websocket, ev: MessageEvent) => {
@@ -51,10 +51,11 @@ if (token != null && !Number.isNaN(user_id)) {
                         else {
                             console.log("Access to user allowed!");
                             /*      Get chats          */
-                        if (!initialized) { 
-                            await ws_manager.getChatsMessage(); 
-                            initialized = true;
-                        }
+                            console.log(initialized);
+                            if (!initialized) { 
+                                initialized = true;
+                                await ws_manager.getChatsMessage(); 
+                            }
                         }
 
                         break;
@@ -111,8 +112,8 @@ if (token != null && !Number.isNaN(user_id)) {
                     case MessageType.SEND_MESSAGE: {
                         const message: ChatMessages = Object.assign(new ChatMessages(), JSON.parse(ans["content"]));
                         message.content = Object.assign(new MessageContent(), message.content);
-                        
-                        chat.add_message(message);
+
+                        if (message.id == chat.chat_id) chat.add_message(message);
 
                         break;
                     }

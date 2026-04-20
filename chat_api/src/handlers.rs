@@ -2,6 +2,7 @@
 // Crate 
 use crate::AppState;
 use crate::message_from_user;
+use crate::chat_functions;
 
 // Std
 use std::{
@@ -54,6 +55,10 @@ use message_from_user::{
     SendMessage
 };
 
+use chat_functions::{
+    start_chat::start_chat,
+    send_message::send_message,
+};
 
 // Project libraries
 use shared_lib::structures::answers::TokenCheckAnswer;
@@ -125,6 +130,7 @@ async fn handle_socket(mut socket: WebSocket, who: SocketAddr, state: Arc<AppSta
         connection_info: who,
         active_chat: None
     };
+
     
     while let Some(Ok(msg)) = receiver.next().await {
             if let Ok(text) = msg.to_text() {
@@ -192,64 +198,15 @@ async fn handle_socket(mut socket: WebSocket, who: SocketAddr, state: Arc<AppSta
                             }
 
                             // START CHAT
-                            MessageType::START_CHAT => {
-                                match serde_json::from_str::<SendMessage>(&data.content) {
-                                    Ok(message) => {
-                                        // 1) Add to chats info with null fields
-                                        let chat_id = ChatsInfo::add(
-                                            &state.client, 
-                                            &ChatsInfo{ 
-                                                id: -1, 
-                                                avatar: "".into(), 
-                                                chat_name: "".into(), 
-                                                members_id: vec![message.id_to, message.id_who] 
-                                            }).await;
-                                        
-                                        // 2) Add to chats user
-                                        // user who send
-                                        let _ = ChatsUser::add_chat(
-                                            &state.client, 
-                                            &message.id_who, 
-                                            &chat_id,
-                                            Some(&message.id_to)
-                                        ).await;
-
-                                        // user who receive
-                                        let _ = ChatsUser::add_chat(
-                                            &state.client, 
-                                            &message.id_to, 
-                                            &chat_id,
-                                            Some(&message.id_who)
-                                        ).await;
-
-                                        // 3) Create chat message
-                                        let _ = ChatMessage::create(&state.client, &chat_id).await;
-
-                                        // 4) Add message
-                                        let _ = ChatMessage::add(&state.client, &chat_id, &message.clone().into()).await;
-
-                                        let chat = ChatsUser::select_all_join_chat_info(&state.client, &chat_id).await;
-                                        let chat_to_send 
-                                            = ChatsUser::select_chat_join_chat_info(&state.client, &message.id_to, &chat_id).await;
-
-                                        println!("{:?} {:?}", chat, chat_to_send);
-                                        // 5) Send to another user
-                                        if let Some(recipient_tx) = state.connections.lock().await.get(&message.id_to) {
-                                            let _ = recipient_tx.send(Message::text(UserMessage::create_chat(chat_to_send[0].clone())));
-                                        }
-                                        let _ = tx.send(Message::text(UserMessage::create_chat(chat[0].clone())));
-                                    }
-                                    Err(err) => {
-                                        let found_users = UsersInfo::get_by_login(&state.client, &data.content).await;
-                                        if found_users.len() > 0 {
-                                            let _ = tx.send(Message::text(UserMessage::start_chat(&found_users[0].clone().into())));                                
-                                        }
-                                        else {
-                                            let _ = tx.send(Message::text(UserMessage::user_not_found()));
-                                        }
-                                        drop(found_users);
-                                    }
+                            MessageType::START_CHAT => { 
+                                let found_users = UsersInfo::get_by_login(&state.client, &data.content).await;
+                                if found_users.len() > 0 {
+                                    let _ = tx.send(Message::text(UserMessage::start_chat(&found_users[0].clone().into())));                                
                                 }
+                                else {
+                                    let _ = tx.send(Message::text(UserMessage::user_not_found()));
+                                }
+                                drop(found_users);
                             }
 
                             // OPEN CHAT
@@ -257,6 +214,8 @@ async fn handle_socket(mut socket: WebSocket, who: SocketAddr, state: Arc<AppSta
                                 match data.content.parse::<i32>() {
                                     Ok(chat_id) => {
                                         let chats = ChatMessage::select_all(&state.client, &chat_id).await;
+                                        user.active_chat = Some(ChatsInfo::get(&state.client, &chat_id).await[0].clone());
+
                                         let _ = tx.send(Message::text(UserMessage::open_chat(&chats)));
                                     }
                                     Err(_) => {
@@ -269,18 +228,33 @@ async fn handle_socket(mut socket: WebSocket, who: SocketAddr, state: Arc<AppSta
                             MessageType::SEND_MESSAGE => {
                                 match serde_json::from_str::<SendMessage>(&data.content) {
                                     Ok(message) => {
-                                        // 1) add message to chat_messages
-                                        let chat_id = message.id_to;
-                                        let _ = ChatMessage::add(&state.client, &chat_id, &message.clone().into()).await;
-                                        if user.active_chat.is_none() {
+                                        let mut chat_id = message.id_to;
+                                        // 1) If chat not exists create it
+                                        // if first_message is true
+                                        if (message.first_message) {
+                                            chat_id = start_chat(&state, &user, &message).await;
+                                        }
+                                        // 2) Put message to db
+                                        send_message(&state, &user, &message).await;
+
+                                        // 3) Check active chats of user
+                                        if user.clone().active_chat.is_none() {
                                             user.active_chat = Some(ChatsInfo::get(&state.client, &chat_id).await[0].clone());
                                         }
-                                        // 2) Send message to users
-                                        for member in user.active_chat.clone().unwrap().members_id {
+
+                                        // 3) Send message to chat members
+
+                                        for member in user.clone().active_chat.unwrap().members_id {
                                             if (member != user.user_id){
                                                 if let Some(recipient_tx) 
                                                         = state.connections.lock().await.get(&member) {
-                                                    let _ = recipient_tx.send(Message::text(UserMessage::send_message(&message.clone().into())));
+                                                    let _ = recipient_tx.send(
+                                                        Message::text(
+                                                            UserMessage::send_message(
+                                                                &message.clone().to_chat_message_with_chat_id(user.user_id, chat_id)
+                                                            )
+                                                        )
+                                                    );
                                                 }
                                             }
                                         }

@@ -125,7 +125,6 @@ export class ChatUI implements ObjectUI {
 
         // Show UI
         this.show();
-        this.add_header(user_info.chat_name, user_info.chat_avatar);
     }
 
     send_message() {

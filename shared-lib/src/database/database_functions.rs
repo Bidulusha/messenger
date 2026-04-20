@@ -332,14 +332,14 @@ impl ChatMessage {
         }
     }
     
-    pub async fn add(client: &Arc<Client>, chat_id: &i32, message: &ChatMessage) {
+    pub async fn add(client: &Arc<Client>, chat_id: &i32, message: &ChatMessage){
         match client.query(&format!("\
             insert into public.chat_message_{}(who_sended, send_time, content) \
-            values($1, $2, $3)", chat_id
+            values($1, $2, $3) ", chat_id
         ), &[&message.who_sended, &message.send_time, &message.content]
         ).await {
-            Ok(_) => {println!("{}", "Succesful add message to chat_message!".green())}
-            Err(err) => {println!("{}", format!("Error adding message to chat_message table! Error {:?}", err).red()) }
+            Ok(data) => { println!("{}", "Succesful add message to chat_message!".green()) }
+            Err(err) => { println!("{}", format!("Error adding message to chat_message table! Error {:?}", err).red()) }
         }
     }
 

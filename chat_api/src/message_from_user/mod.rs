@@ -44,8 +44,8 @@ pub struct UserMessage {
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct SendMessage {
-    pub id_who: i32,
     pub id_to: i32,
+    pub first_message: bool,
     pub what: MessageContent
 }
 
@@ -130,13 +130,22 @@ impl UserMessage {
 }
 
 
-impl From<SendMessage> for ChatMessage {
-    fn from(value: SendMessage) -> Self {
+impl SendMessage {
+    pub fn to_chat_message(self, user_id: i32) -> ChatMessage {
         ChatMessage { 
             id: -1, 
-            who_sended: value.id_who, 
+            who_sended: user_id, 
             send_time: chrono::Utc::now().time(), 
-            content: value.what
+            content: self.what
+        }
+    }
+
+    pub fn to_chat_message_with_chat_id(self, user_id: i32, chat_id: i32) -> ChatMessage {
+        ChatMessage { 
+            id: chat_id, 
+            who_sended: user_id, 
+            send_time: chrono::Utc::now().time(), 
+            content: self.what
         }
     }
 }

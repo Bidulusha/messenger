@@ -18,7 +18,7 @@ export class PopUpNewChatUI implements PopUpUI {
         });
 
         this.inputElement.addEventListener("keypress", (ev) => {
-            if (ev.keyCode == 13 && !ev.shiftKey) { 
+            if (ev.keyCode == 13) { 
                 ev.preventDefault();
                 ws_manager.startChatMessage(this.inputElement.value);
                 
