@@ -8,7 +8,7 @@ export class SidebarUI implements ObjectUI {
     sidebarDiv: HTMLDivElement = document.querySelector("#main_sidebar")!; 
     
     ws: WebsocketManager;
-    currentChat: number;
+    currentChat: ChatsInfo;
 
     constructor(ws: WebsocketManager){
         this.ws = ws;
@@ -28,7 +28,12 @@ export class SidebarUI implements ObjectUI {
         chat_info_button.classList.add("sidebar-element");
         chat_info_button.addEventListener("click", (ev) => {
             this.ws.openChatMessage(chat.chat_id);
-            this.currentChat = chat.chat_id;
+            this.currentChat = new ChatsInfo(
+                chat.chat_id,
+                chat.chat_avatar,
+                chat.chat_name,
+                chat.members_id
+            );
         })
         
         const chat_avatar_div = document.createElement("div");

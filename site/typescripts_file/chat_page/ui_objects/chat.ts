@@ -29,23 +29,28 @@ export class ChatUI implements ObjectUI {
     ws: WebsocketManager;
     sidebar: SidebarUI;
 
-    // Input element charatresitics
-    input_base_height: number = this.chatInputField.scrollHeight;
+    // Chat message info
+    private _message_id = 0;
+    private _answer_to: number = -1;
+    private _forwarded_from: number = -1;
+    private _photos_content: string[] = [];
+    private _files: string[] = [];
 
-    // Additional info
+    // Chat info
     user_id: number;
-    user_with_chat_id: number;
     chat: ChatsInfo;
-    private _chat_id: number;
-
-
+    set chat_id(value: number) { this.chat.id = value; }
+    get chat_id() { return this.chat.id; } 
+    
+    
     first_message: boolean = false;
 
-    // Constructor
+
+    /*                  CONSTRUCTOR              */
     constructor(ws: WebsocketManager, sidebar: SidebarUI, user_id: number) {
         this.ws = ws;
         this.user_id = user_id;
-
+        
         this.close();
         this.chatButtonSend.addEventListener("click", () => this.send_message());
         this.chatInputElement.addEventListener("keypress", (ev) => {
@@ -55,11 +60,28 @@ export class ChatUI implements ObjectUI {
             }
         });
     }
+    
 
-    // Set chat_id
-    set chat_id(value: number) {
-        this._chat_id = value;
+    /*                  UI METHODS                */
+    show() {
+        this.chatElement.style.display = "flex";
+        this.chatBodyTextElement.scroll(0, this.chatBodyTextElement.scrollHeight);
+        this.add_header();
     }
+
+    close() {
+        this.chatBodyTextElement.innerHTML = "";
+        this.chatElement.style.display = "none";
+    }
+
+    // Add header
+    add_header() {
+        // Create base elements
+        this.chatAvatartImage.src = AVATARS_URL + this.chat.avatar;
+        this.chatNameElement.innerText = this.chat.chat_name;
+        this.chatAvatartImage.style.display = "block";
+    }
+
 
     // Add message to page
     add_message(message: ChatMessages) {
@@ -77,52 +99,23 @@ export class ChatUI implements ObjectUI {
         sended_message_container.append(sended_message_text);
         this.chatBodyTextElement.append(sended_message_container);
     }
-
-    // Add header
-    add_header(login: string, avatar: string) {
-        // Create base elements
-        this.chatNameElement.innerText = login;
-        this.chatAvatartImage.style.display = "block";
-        this.chatAvatartImage.src = AVATARS_URL + avatar;
-    }
-
-    private add_message_string(message: string) {
-        const sended_message_container = document.createElement("div");
-        sended_message_container.classList.add("chat__body-text__message-container");
-        
-        const sended_message_text = document.createElement("div");
-        sended_message_text.classList.add("chat__body-text__sended_message");
-        sended_message_text.classList.add("message-text");
-        sended_message_text.innerText = message;
-        
-        sended_message_container.append(sended_message_text);
-        this.chatBodyTextElement.append(sended_message_container);
-    }
-
-    show() {
-        this.chatElement.style.display = "flex";
-        this.chatBodyTextElement.scroll(0, this.chatBodyTextElement.scrollHeight);
-    }
-
-    close() {
-        this.chatBodyTextElement.innerHTML = "";
-        this.chatElement.style.display = "none";
-    }
-
-    open_chat(chat_id: number, messages: ChatMessages[]) {
+    
+    /*                  MESSAGE METHODS              */
+    open_chat(chat: ChatsInfo, messages: ChatMessages[]) {
         this.close();
-        this._chat_id = chat_id;
+
+        this.chat = chat;
         messages.forEach((message, ind) => {
             this.add_message(message);
         });
+        
         this.show();
     }
 
     start_chat(user_info: ChatsUserWithInfo){
         this.close();
-        // Base
+
         this.first_message = true;
-        this.user_with_chat_id = user_info.chat_id;
         this.chat = new ChatsInfo (
             user_info.chat_id,
             user_info.chat_avatar,
@@ -130,61 +123,52 @@ export class ChatUI implements ObjectUI {
             user_info.members_id
         );
 
-        console.log(this.chat);
-
         // Show UI
         this.show();
         this.add_header(user_info.chat_name, user_info.chat_avatar);
     }
 
     send_message() {
-        // Set scroll
-
         // Not empty
         if (this.chatInputField.innerText == "") {
             alert("Текст не может быть пустым!");
             return;
         }
 
-        // If first message
-        if (this.first_message){
-            this.first_message = false;
-            this.ws.sendChatFirstMessage(
-                new SendMessage(
-                    this.user_id,
-                    this.user_with_chat_id,
-                    new MessageContent (
-                        -1,
-                        -1,
-                        this.chatInputField.innerText,
-                        [""],
-                        [""],
-                    )
-                )
-            );
-        } 
-        // Just send message
-        else {
-            this.ws.sendChatMessage(
-                new SendMessage(
-                    this.user_id,
-                    this._chat_id,
-                    new MessageContent (
-                        -1,
-                        -1,
-                        this.chatInputField.innerText,
-                        [""],
-                        [""],
-                    )
-                )
+        // Create new MessageContent object
+        const message = new MessageContent (
+                    this._answer_to,
+                    this._forwarded_from,
+                    this.chatInputField.innerText,
+                    this._photos_content,
+                    this._files
+                );
+        
+        // Send message
+        this.ws.sendChatMessage(
+            new SendMessage(
+                this.chat_id,
+                this.first_message,
+                message
             )
-        }
+        );
 
         // Create message on page
-        this.add_message_string(this.chatInputField.innerText);
+        this.add_message(
+            new ChatMessages(
+                this._message_id,
+                this.user_id,
+                new Time(new Date()),
+                message
+            )
+        );
 
         // Remove text from intput
         this.chatInputField.innerText = "";
         this.chatBodyTextElement.scroll(0, this.chatBodyTextElement.scrollHeight);
+
+        // Edit values
+        this.first_message = false;
+        this._message_id++;
     }
 }

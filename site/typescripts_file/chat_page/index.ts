@@ -97,7 +97,6 @@ if (token != null && !Number.isNaN(user_id)) {
                         });
 
                         chat.open_chat(sidebar.currentChat, chat_messages);
-
                         break;
                     }
 

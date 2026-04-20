@@ -25,7 +25,7 @@ export class MessageContent {
     
 }
 
-export class ChatMessages { // ADD CHAT ID!!!!
+export class ChatMessages { 
     id: number;
     who_sended: number;
     send_time: String;
@@ -47,17 +47,17 @@ export class ChatMessages { // ADD CHAT ID!!!!
 }
 
 export class SendMessage {
-    id_who: number;
     id_to: number;
+    first_message: boolean;
     what: MessageContent;
 
     constructor(
-        id_who: number,
-        chat_id: number,
+        id_to: number,
+        first_message: boolean,
         what: MessageContent
     ) {
-        this.id_who = id_who;
-        this.id_to = chat_id;
+        this.id_to = id_to;
+        this.first_message = first_message;
         this.what = what;
     }
 }

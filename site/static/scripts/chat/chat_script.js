@@ -11,6 +11,16 @@
   var SIGN_IN_URL = BASE_URL + ":3000/sign_in";
   var CHAT_WS_URL = WS_URL + ":8080/api/chat_ws";
 
+  // objects/chat_info.ts
+  var ChatsInfo = class {
+    constructor(id, avatar, chat_name, members_id) {
+      this.id = id;
+      this.avatar = avatar;
+      this.chat_name = chat_name;
+      this.members_id = members_id;
+    }
+  };
+
   // ui_objects/sidebar.ts
   var SidebarUI = class {
     constructor(ws) {
@@ -30,7 +40,12 @@
       chat_info_button.classList.add("sidebar-element");
       chat_info_button.addEventListener("click", (ev) => {
         this.ws.openChatMessage(chat2.chat_id);
-        this.currentChat = chat2.chat_id;
+        this.currentChat = new ChatsInfo(
+          chat2.chat_id,
+          chat2.chat_avatar,
+          chat2.chat_name,
+          chat2.members_id
+        );
       });
       const chat_avatar_div = document.createElement("div");
       const chat_avatar_img = document.createElement("img");
@@ -790,16 +805,6 @@
     }
   };
 
-  // objects/chat_info.ts
-  var ChatsInfo = class {
-    constructor(id, avatar, chat_name, members_id) {
-      this.id = id;
-      this.avatar = avatar;
-      this.chat_name = chat_name;
-      this.members_id = members_id;
-    }
-  };
-
   // objects/chat_message.ts
   var MessageContent = class {
     constructor(answer_to, forwarded_from, text_content, photos_content, files) {
@@ -823,16 +828,29 @@
     }
   };
   var SendMessage = class {
-    constructor(id_who, chat_id, what) {
-      this.id_who = id_who;
-      this.id_to = chat_id;
+    constructor(id_to, first_message, what) {
+      this.id_to = id_to;
+      this.first_message = first_message;
       this.what = what;
+    }
+  };
+
+  // objects/time.ts
+  var Time = class {
+    get isoTime() {
+      return this._time;
+    }
+    get hmsTime() {
+      return this._time.slice(0, 10);
+    }
+    constructor(time) {
+      this._time = time.toISOString();
     }
   };
 
   // ui_objects/chat.ts
   var ChatUI = class {
-    // Constructor
+    /*                  CONSTRUCTOR              */
     constructor(ws, sidebar2, user_id2) {
       // Elements on page
       this.chatElement = document.querySelector("#chat_body");
@@ -846,8 +864,12 @@
       this.chatInputElement = this.chatElement.querySelector(".chat__input");
       this.chatInputField = this.chatInputElement.querySelector(".chat__input-text");
       this.chatButtonSend = this.chatInputElement.querySelector(".chat__input-button");
-      // Input element charatresitics
-      this.input_base_height = this.chatInputField.scrollHeight;
+      // Chat message info
+      this._message_id = 0;
+      this._answer_to = -1;
+      this._forwarded_from = -1;
+      this._photos_content = [];
+      this._files = [];
       this.first_message = false;
       this.ws = ws;
       this.user_id = user_id2;
@@ -860,9 +882,27 @@
         }
       });
     }
-    // Set chat_id
     set chat_id(value) {
-      this._chat_id = value;
+      this.chat.id = value;
+    }
+    get chat_id() {
+      return this.chat.id;
+    }
+    /*                  UI METHODS                */
+    show() {
+      this.chatElement.style.display = "flex";
+      this.chatBodyTextElement.scroll(0, this.chatBodyTextElement.scrollHeight);
+      this.add_header();
+    }
+    close() {
+      this.chatBodyTextElement.innerHTML = "";
+      this.chatElement.style.display = "none";
+    }
+    // Add header
+    add_header() {
+      this.chatAvatartImage.src = AVATARS_URL + this.chat.avatar;
+      this.chatNameElement.innerText = this.chat.chat_name;
+      this.chatAvatartImage.style.display = "block";
     }
     // Add message to page
     add_message(message) {
@@ -877,33 +917,10 @@
       sended_message_container.append(sended_message_text);
       this.chatBodyTextElement.append(sended_message_container);
     }
-    // Add header
-    add_header(login, avatar) {
-      this.chatNameElement.innerText = login;
-      this.chatAvatartImage.style.display = "block";
-      this.chatAvatartImage.src = AVATARS_URL + avatar;
-    }
-    add_message_string(message) {
-      const sended_message_container = document.createElement("div");
-      sended_message_container.classList.add("chat__body-text__message-container");
-      const sended_message_text = document.createElement("div");
-      sended_message_text.classList.add("chat__body-text__sended_message");
-      sended_message_text.classList.add("message-text");
-      sended_message_text.innerText = message;
-      sended_message_container.append(sended_message_text);
-      this.chatBodyTextElement.append(sended_message_container);
-    }
-    show() {
-      this.chatElement.style.display = "flex";
-      this.chatBodyTextElement.scroll(0, this.chatBodyTextElement.scrollHeight);
-    }
-    close() {
-      this.chatBodyTextElement.innerHTML = "";
-      this.chatElement.style.display = "none";
-    }
-    open_chat(chat_id, messages) {
+    /*                  MESSAGE METHODS              */
+    open_chat(chat2, messages) {
       this.close();
-      this._chat_id = chat_id;
+      this.chat = chat2;
       messages.forEach((message, ind) => {
         this.add_message(message);
       });
@@ -912,14 +929,12 @@
     start_chat(user_info) {
       this.close();
       this.first_message = true;
-      this.user_with_chat_id = user_info.chat_id;
       this.chat = new ChatsInfo(
         user_info.chat_id,
         user_info.chat_avatar,
         user_info.chat_name,
         user_info.members_id
       );
-      console.log(this.chat);
       this.show();
       this.add_header(user_info.chat_name, user_info.chat_avatar);
     }
@@ -928,39 +943,32 @@
         alert("\u0422\u0435\u043A\u0441\u0442 \u043D\u0435 \u043C\u043E\u0436\u0435\u0442 \u0431\u044B\u0442\u044C \u043F\u0443\u0441\u0442\u044B\u043C!");
         return;
       }
-      if (this.first_message) {
-        this.first_message = false;
-        this.ws.sendChatFirstMessage(
-          new SendMessage(
-            this.user_id,
-            this.user_with_chat_id,
-            new MessageContent(
-              -1,
-              -1,
-              this.chatInputField.innerText,
-              [""],
-              [""]
-            )
-          )
-        );
-      } else {
-        this.ws.sendChatMessage(
-          new SendMessage(
-            this.user_id,
-            this._chat_id,
-            new MessageContent(
-              -1,
-              -1,
-              this.chatInputField.innerText,
-              [""],
-              [""]
-            )
-          )
-        );
-      }
-      this.add_message_string(this.chatInputField.innerText);
+      const message = new MessageContent(
+        this._answer_to,
+        this._forwarded_from,
+        this.chatInputField.innerText,
+        this._photos_content,
+        this._files
+      );
+      this.ws.sendChatMessage(
+        new SendMessage(
+          this.chat_id,
+          this.first_message,
+          message
+        )
+      );
+      this.add_message(
+        new ChatMessages(
+          this._message_id,
+          this.user_id,
+          new Time(/* @__PURE__ */ new Date()),
+          message
+        )
+      );
       this.chatInputField.innerText = "";
       this.chatBodyTextElement.scroll(0, this.chatBodyTextElement.scrollHeight);
+      this.first_message = false;
+      this._message_id++;
     }
   };
 
