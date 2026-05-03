@@ -1,6 +1,8 @@
 /*              Includes                 */
 // Crate 
 use crate::AppState;
+use crate::chat_functions::create_chat::create_chat;
+use crate::chat_functions::delete_account;
 use crate::message_from_user;
 use crate::chat_functions;
 
@@ -40,6 +42,7 @@ use axum_extra::{
 };
 
 use shared_lib::database::ChatsUserWithInfo;
+use shared_lib::database::UserShortInfo;
 // Tokio
 use tokio::sync::mpsc;
 
@@ -58,6 +61,7 @@ use message_from_user::{
 use chat_functions::{
     start_chat::start_chat,
     send_message::send_message,
+    delete_account::delete_account
 };
 
 // Project libraries
@@ -103,17 +107,11 @@ async fn handle_socket(mut socket: WebSocket, who: SocketAddr, state: Arc<AppSta
         return;
     }
 
-    // Creating websocket req->ans connection
-    // For making req<->ans check https://github.com/tokio-rs/axum/blob/main/examples/websockets/src/client.rs
-    // receive single message from a client (we can either receive or send with socket).
-    // this will likely be the Pong for our Ping or a hello message from client.
-    // waiting for message from a client will block this task, but will not block other client's
-
     let (mut sender, mut receiver) = socket.split();
 
     let (tx, mut rx) = mpsc::unbounded_channel::<Message>();
 
-    let mut send_task = tokio::spawn(async move {
+    let send_task = tokio::spawn(async move {
         while let Some(msg) = rx.recv().await {
             if sender.send(msg).await.is_err() {
                 break;
@@ -139,12 +137,12 @@ async fn handle_socket(mut socket: WebSocket, who: SocketAddr, state: Arc<AppSta
                     Ok(data) => {
                         // NOT AUTHORIZED USER
                         if user.authorized != true && data.message_type != MessageType::AUTH_CHECK {
-                            let _ = tx.send(Message::text(UserMessage::auth_access_denied()));
+                            let _ = tx.send(Message::text(UserMessage::auth_access_denied(data.req_id)));
                             break;
                         }
 
                         // GET REQUESTS
-                        match data.message_type{
+                        match data.message_type{ // EDIT THIS!
                             MessageType::AUTH_CHECK => { // Check token
                                 println!("HERE!");
                                 if let Ok(req) = serde_json::from_str::<AuthRequest>(&data.content) {
@@ -158,52 +156,69 @@ async fn handle_socket(mut socket: WebSocket, who: SocketAddr, state: Arc<AppSta
                                             }).unwrap())
                                         .send()
                                         .await.unwrap().text().await.unwrap()) {
-                                            Ok(data) => {
-                                                if data.status_code == AuthStatus::ACCESS_ALLOWED {
+                                            Ok(auth_data) => {
+                                                if auth_data.status_code == AuthStatus::ACCESS_ALLOWED {
                                                     user.user_id = req.user_id;
                                                     user.authorized = true;
-                                                    let user_info = 
-                                                            UsersInfo::get_by_user_id(&state.client, &user.user_id).await;
-                                                    user.user_name = user_info[0].clone().login;
-                                                    user.user_avatar = user_info[0].clone().avatar;
+                                                    if let Ok(user_info) = 
+                                                        UsersInfo::get_by_user_id(&state.client, &user.user_id).await {
+                                                            user.user_name = user_info.login;
+                                                            user.user_avatar = user_info.avatar;
+                                                    } else {
+                                                        let _ = tx.send(Message::text(UserMessage::auth_access_denied(data.req_id)));
+                                                    };
+                                                    
                                                     state.connections.lock().await.insert(user.user_id, tx.clone());
-                                                    let _ = tx.send(Message::text(UserMessage::auth_access_allowed()));
-                                                    let _ = tx.send(Message::text(UserMessage::user_short_info(&user)));
+                                                    let _ = tx.send(Message::text(UserMessage::auth_access_allowed(data.req_id)));
                                                     drop(data);
                                                 }
                                                 else {
-                                                    let _ = tx.send(Message::text(UserMessage::auth_access_denied()));
+                                                    let _ = tx.send(Message::text(UserMessage::auth_access_denied(data.req_id)));
                                                     break;
                                                 }
                                             }
                                             Err(_) => {
-                                                let _ = tx.send(Message::text(UserMessage::auth_access_denied()));
+                                                let _ = tx.send(Message::text(UserMessage::auth_access_denied(data.req_id)));
                                                 break;
                                             }
                                         }
                                 } else {
-                                    let _ = tx.send(Message::text(UserMessage::auth_access_denied()));
+                                    let _ = tx.send(Message::text(UserMessage::auth_access_denied(data.req_id)));
                                     break;
+                                }
+                            }
+                            MessageType::USER_SHORT_INFO => {
+                                match data.content.parse::<i32>() {
+                                    Ok(user_id) => {
+                                        if let Ok(user) = UsersInfo::get_by_user_id(&state.client, &user_id).await {
+                                            let _ = tx.send(Message::text(UserMessage::user_short_info(
+                                                data.req_id,
+                                                &user.into()
+                                            )));
+                                        }{
+                                            let _ = tx.send(Message::text(UserMessage::user_not_found(data.req_id)));
+                                        }
+                                    }
+                                    Err(_) => {
+                                        if let Ok(user) = UsersInfo::get_by_login(&state.client, &data.content).await {
+                                            let _ = tx.send(Message::text(UserMessage::user_short_info(
+                                                data.req_id,
+                                                &user[0].clone().into()
+                                            )));
+                                        } else {
+                                            println!("{}", format!("User not found! Data: {:?}", data).red());
+                                            let _ = tx.send(Message::text(UserMessage::user_not_found(data.req_id)));
+                                        }
+                                    }
                                 }
                             }
 
                             // GET CHATS
                             MessageType::GET_CHATS => { // Get chats
-                                let chats = ChatsUser::select_all_join_chat_info(&state.client, &user.user_id).await;
-                                let _ = tx.send(Message::text(UserMessage::get_chats(&chats)));
+                                let chats 
+                                    = ChatsUser::select_all_join_chat_info(&state.client, &user.user_id).await;
+                                tx.send(Message::text(UserMessage::get_chats(data.req_id, &chats))).unwrap();
                                 drop(chats);
-                            }
-
-                            // START CHAT
-                            MessageType::START_CHAT => { 
-                                let found_users = UsersInfo::get_by_login(&state.client, &data.content).await;
-                                if found_users.len() > 0 {
-                                    let _ = tx.send(Message::text(UserMessage::start_chat(&found_users[0].clone().into())));                                
-                                }
-                                else {
-                                    let _ = tx.send(Message::text(UserMessage::user_not_found()));
-                                }
-                                drop(found_users);
                             }
 
                             // OPEN CHAT
@@ -213,11 +228,37 @@ async fn handle_socket(mut socket: WebSocket, who: SocketAddr, state: Arc<AppSta
                                         let chats = ChatMessage::select_all(&state.client, &chat_id).await;
                                         user.active_chat = Some(ChatsInfo::get(&state.client, &chat_id).await[0].clone());
 
-                                        let _ = tx.send(Message::text(UserMessage::open_chat(&chats)));
+                                        let _ = tx.send(Message::text(UserMessage::open_chat(data.req_id, &chats)));
                                     }
                                     Err(_) => {
-                                        let _ = tx.send(Message::text(UserMessage::chat_not_found()));
+                                        let _ = tx.send(Message::text(UserMessage::chat_not_found(data.req_id)));
                                     }
+                                }
+                            }
+
+                            // Create chat
+                            MessageType::CREATE_CHAT => {
+                                if let Ok(chat_info) = serde_json::from_str::<ChatsInfo>(&data.content) {
+                                    if let Ok(chat_id) = create_chat(
+                                        &state, 
+                                        &chat_info.avatar, 
+                                        &chat_info.chat_name, 
+                                        &chat_info.members_id)
+                                        .await {
+                                            tx.send(Message::text(
+                                                UserMessage::create_chat(
+                                                data.req_id, 
+                                                &ChatsUserWithInfo { 
+                                                    chat_id: chat_id, 
+                                                    chat_name: chat_info.chat_name, 
+                                                    chat_avatar: chat_info.avatar, 
+                                                    with_user: None, 
+                                                    members_id: chat_info.members_id
+                                                }))).unwrap();    
+                                            }
+                                }
+                                else {
+                                    println!("{}", format!("Error while parsing members: {}", data.content).red());
                                 }
                             }
 
@@ -225,47 +266,21 @@ async fn handle_socket(mut socket: WebSocket, who: SocketAddr, state: Arc<AppSta
                             MessageType::SEND_MESSAGE => {
                                 match serde_json::from_str::<SendMessage>(&data.content) {
                                     Ok(message) => {
-                                        let mut chat_id = message.id_to;
-                                        // 1) If chat not exists create it
-                                        // if first_message is true
-                                        if (message.first_message) {
-                                            chat_id = start_chat(&state, &user, &message).await;
-                                        }
-                                        // 2) Put message to db
-                                        send_message(&state, &user, &message).await;
-
-                                        // 3) Check active chats of user
-                                        if user.clone().active_chat.is_none() {
-                                            user.active_chat = Some(ChatsInfo::get(&state.client, &chat_id).await[0].clone());
-                                        }
-
-                                        // 3) Send message to chat members
-
-                                        for member in user.clone().active_chat.unwrap().members_id {
-                                            if (member != user.user_id){
-                                                if let Some(recipient_tx) 
-                                                        = state.connections.lock().await.get(&member) {
-                                                    let _ = recipient_tx.send(
-                                                        Message::text(
-                                                            UserMessage::send_message(
-                                                                &message.clone().to_chat_message_with_chat_id(user.user_id, chat_id)
-                                                            )
-                                                        )
-                                                    );
-                                                }
-                                            }
-                                        }
+                                        send_message(&state, &mut user, &message, &tx, data.req_id).await;
                                     }
                                     Err(err) => {println!("{}", format!("Error getting chat message! Error {:?}", err).red())}
                                 }
+                            }
+
+                            MessageType::DELETE_ACCOUNT => {
+                                delete_account(&state.client, &user.user_id).await;
+                                break;
                             }
 
                             _ => {
                                 println!("{}", format!("{:?}", data).purple());
                             }
                         }
-
-                        drop(data);
                     }
                     Err(err) => { 
                         println!("{who} Send {}. Error {:?} ", msg.to_text().unwrap(), err);

@@ -37,6 +37,10 @@ use http::Method;
 // Project files
 use route::create_router;
 
+// Project libraries
+use shared_lib::database::create_postgresql_client;
+
+
 /*              App state            */
 struct AppState{
     client: Arc<Client>,
@@ -48,18 +52,7 @@ struct AppState{
 #[tokio::main]
 async fn main() -> Result<(), Error>{
     // Connect to postgresql
-    //init dotenv
-    dotenv().ok();
-
-    //init database
-    let db_host = std::env::var("POSTGRES_HOST").expect("POSTGRES_HOST must be set!");
-    let db_port = std::env::var("POSTGRES_PORT").expect("POSTGRES_PORT must be set!");
-    let db_name = std::env::var("POSTGRES_DB").expect("POSTGRES_DB must be set!");
-    let db_user = std::env::var("POSTGRES_USER").expect("POSTGRES_USER must be set!");
-    let db_password = std::env::var("POSTGRES_PASSWORD").expect("POSTGRES_PASSWORD must be set");
-
-    let (client, connection) = 
-        tokio_postgres::connect(&format!("host={} port={} dbname={} user={} password={}", db_host, db_port, db_name, db_user, db_password), NoTls).await?;
+    let (client, connection) = create_postgresql_client().await?;
 
     tokio::spawn(async move{
         if let Err(err) = connection.await {

@@ -1,7 +1,7 @@
 // SERVER SETTINGS
 const PROTOCOL = "http://";
 // const DOMEN = "localhost";
-const DOMEN = "91.122.215.194";
+const DOMEN = "localhost";
 
 // BASE OF URL
 export const BASE_URL = PROTOCOL + DOMEN;

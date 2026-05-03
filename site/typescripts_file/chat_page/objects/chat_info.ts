@@ -1,5 +1,4 @@
-import { MessageContent } from "./chat_message";
-import { Time } from "./time";
+import { ChatsUserWithInfo } from "./chats_user_with_info";
 
 export class ChatsInfo {
     id: number;
@@ -8,14 +7,26 @@ export class ChatsInfo {
     members_id: number[];
 
     constructor(
-        id: number,
-        avatar: string,
-        chat_name: string,
-        members_id: number[],
+        id: number | void,
+        avatar: string | void,
+        chat_name: string | void,
+        members_id: number[] | void,
     ) {
-        this.id = id;
-        this.avatar = avatar;
-        this.chat_name = chat_name;
-        this.members_id = members_id;
+        if (id != undefined) {
+            this.id = id;
+            this.avatar = avatar!;
+            this.chat_name = chat_name!;
+            this.members_id = members_id!;
+        }
     }   
+
+    intoChatUserWithInof(): ChatsUserWithInfo {
+        return new ChatsUserWithInfo (
+            this.id,
+            this.chat_name,
+            this.avatar,
+            null,
+            this.members_id
+        )
+    }
 }

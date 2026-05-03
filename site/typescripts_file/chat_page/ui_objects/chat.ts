@@ -36,24 +36,40 @@ export class ChatUI implements ObjectUI {
     private _forwarded_from: number = -1;
     private _photos_content: string[] = [];
     private _files: string[] = [];
+    
+    private last_sender_user: number = -1;
 
     // Chat info
     user_id: number;
     chat: ChatsInfo;
-    set chat_id(value: number) { this.chat.id = value; }
+    users_in_chat_info: Map<number, Map<number, UserShortInfo>> = new Map();
+
+    private resolveUpdateFn: (value: ChatsInfo) => void;
+    private resolveSendMessageFn: (value: number) => void;
+
+    set chat_id(value: number) { this.chat.id = value; this.resolveUpdateFn(this.chat);}
     get chat_id() { 
         if (this.chat != undefined) return this.chat.id; 
         else return -1;
     } 
-    
+
+    sendChatMessage(): Promise<number> {
+        return new Promise((resolve) => {
+            this.resolveSendMessageFn = resolve;
+        })
+    }
+
+    newChatUpdate(): Promise<ChatsInfo> {
+        return new Promise((resolve) => {
+            this.resolveUpdateFn = resolve;
+        });
+    }
+
     // Markdown options
     md_options = { addCopyToClipboard: true, interactiveCheckboxes: false };
-    
-    first_message: boolean = false;
-
 
     /*                  CONSTRUCTOR              */
-    constructor(ws: WebsocketManager, sidebar: SidebarUI, user_id: number) {
+    constructor(ws: WebsocketManager, user_id: number) {
         this.ws = ws;
         this.user_id = user_id;
         
@@ -88,15 +104,38 @@ export class ChatUI implements ObjectUI {
         this.chatAvatartImage.style.display = "block";
     }
 
-
     // Add message to page
-    add_message(message: ChatMessages) {
+    add_message(message: ChatMessages, get: boolean = false) {
+        if (get && message.id != this.chat.id) return;
+        
+
         const hmtlContent = markdownToHtml(message.content.text_content, this.md_options);
 
         const sended_message_container = document.createElement("div");
+        const text_container = document.createElement("div");
+
         sended_message_container.classList.add("chat__body-text__message-container");
+        text_container.classList.add("chat__body-text__text-container");
+
         const sended_message_text = document.createElement("div");
 
+        if (this.last_sender_user != message.who_sended){
+            const user = this.users_in_chat_info.get(this.chat.id)?.get(message.who_sended);
+            const user_name_div = document.createElement("div");
+            const user_avatar = document.createElement("img");
+
+            user_name_div.classList.add("sender_user_name");
+            user_avatar.classList.add("sender_avatar");
+
+            if (user != null) {
+                user_name_div.innerText = user.login;
+                user_avatar.src = AVATARS_URL + user.avatar;
+            }
+
+            sended_message_container.append(user_avatar);
+            text_container.append(user_name_div);
+        }
+    
         if (message.who_sended == this.user_id) 
             sended_message_text.classList.add("chat__body-text__sended_message");
         else sended_message_text.classList.add("chat__body-text__recieved_message");
@@ -105,10 +144,35 @@ export class ChatUI implements ObjectUI {
         // sended_message_text.innerText = message.content.text_content;
         sended_message_text.innerHTML = hmtlContent;
         
-        sended_message_container.append(sended_message_text);
+        text_container.append(sended_message_text);
+        sended_message_container.append(text_container);
         this.chatBodyTextElement.append(sended_message_container);
+        this.last_sender_user = message.who_sended;
     }
     
+    // Setup chat info
+    setupChats(chats: ChatsUserWithInfo[]) {
+        for (let chat of chats) {
+            const users_info = new Map();
+            for(let member of chat.members_id) {
+                this.ws.getUserInfo(member).then((value) => {
+                    users_info.set(member, value);
+                });
+            }
+            this.users_in_chat_info.set(chat.chat_id, users_info);
+        }
+    }
+
+    addNewChatInfo(chat: ChatsUserWithInfo) {
+        const users_info = new Map();
+        for(let member of chat.members_id) {
+            this.ws.getUserInfo(member).then((value) => {
+                users_info.set(member, value);
+            });
+        }
+        this.users_in_chat_info.set(chat.chat_id, users_info);
+    }
+
     /*                  MESSAGE METHODS              */
     open_chat(chat: ChatsInfo, messages: ChatMessages[]) {
         this.close();
@@ -121,15 +185,14 @@ export class ChatUI implements ObjectUI {
         this.show();
     }
 
-    start_chat(user_info: ChatsUserWithInfo){
+    start_chat(user_info: UserShortInfo){
         this.close();
 
-        this.first_message = true;
         this.chat = new ChatsInfo (
-            user_info.chat_id,
-            user_info.chat_avatar,
-            user_info.chat_name,
-            user_info.members_id
+            user_info.id,
+            user_info.avatar,
+            user_info.login,
+            [user_info.id, this.user_id]
         );
 
         // Show UI
@@ -152,14 +215,20 @@ export class ChatUI implements ObjectUI {
                     this._files
                 );
         
+        this.resolveSendMessageFn(this.chat_id);
+
         // Send message
         this.ws.sendChatMessage(
             new SendMessage(
                 this.chat_id,
-                this.first_message,
                 message
             )
-        );
+        ).then((answer) => {
+            if (answer == null) { console.error("ERROR SENDING MESSAGE!"); return;}
+            if (answer == "Ok") { console.log("Message sended succesfuly!"); return; }
+            this.chat.id = (answer as number);
+            console.log("Created new chat!");
+        });
 
         // Create message on page
         this.add_message(
@@ -175,8 +244,6 @@ export class ChatUI implements ObjectUI {
         this.chatInputField.innerText = "";
         this.chatBodyTextElement.scroll(0, this.chatBodyTextElement.scrollHeight);
 
-        // Edit values
-        this.first_message = false;
         this._message_id++;
     }
 }

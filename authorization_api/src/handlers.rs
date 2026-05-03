@@ -44,35 +44,33 @@ pub async fn sign_in_auth(
     match serde_json::from_str::<SignInAuthForm>(&raw_data) {
         Ok(data) => {
             // 1) User exists check
-            let users = UsersInfo::get_by_login(&state.client, &data.login).await;
-            // User not found
-            if users.len() == 0 {
-                return Json(AuthAnswer { status_code: 
-                    AuthStatus::USER_NOT_FOUND, 
-                    user_id: -1, 
-                    token: "".into() 
+            if let Ok(users) = UsersInfo::get_by_login(&state.client, &data.login).await{
+                // 1) Password check
+                // Password incorrect
+                if users[0].password != data.password {
+                    return Json(AuthAnswer { status_code: 
+                        AuthStatus::SIGNIN_DATA_ERROR, 
+                        user_id: -1, 
+                        token: "".into() 
+                    });
+                }
+
+                // 2) Create new session token and add to db
+                let token = create_token_and_add_to_db(&state.client, &users[0], &user_agent.to_string()).await;
+
+                // 3) Answer to user
+                return Json(AuthAnswer {
+                    status_code: AuthStatus::ACCESS_ALLOWED,
+                    user_id: users[0].id,
+                    token: token
                 });
-            }
-
-            // 2) Password check
-            // Password incorrect
-            if users[0].password != data.password {
+            } else {
                 return Json(AuthAnswer { status_code: 
-                    AuthStatus::SIGNIN_DATA_ERROR, 
-                    user_id: -1, 
-                    token: "".into() 
-                });
-            }
-
-            // 3) Create new session token and add to db
-            let token = create_token_and_add_to_db(&state.client, &users[0], &user_agent.to_string()).await;
-
-            // 4) Answer to user
-            return Json(AuthAnswer {
-                status_code: AuthStatus::ACCESS_ALLOWED,
-                user_id: users[0].id,
-                token: token
-            });
+                        AuthStatus::USER_NOT_FOUND, 
+                        user_id: -1, 
+                        token: "".into() 
+                    });
+            };
         }
         Err(err) => {
             println!("Cannot parse authorization form! Error: {err}");
@@ -93,11 +91,10 @@ pub async fn sign_up_auth(
 ) -> Json<AuthAnswer> {
     match serde_json::from_str::<SignUpAuthForm>(&raw_data){
         Ok(data) => {
-            let max_id = select_max_user_id(&state.client).await;
             let mut user: UsersInfo = data.into();
             
             // 1) USER EXISTS 
-            if UsersInfo::get_by_login(&state.client, &user.login).await.len() != 0 {
+            if UsersInfo::get_by_login(&state.client, &user.login).await.is_ok() {
                 println!("User exists error!");
                 return Json(AuthAnswer{
                     status_code: AuthStatus::USER_ALREADY_EXISTS,
@@ -108,8 +105,7 @@ pub async fn sign_up_auth(
             }
 
             // 2) Create user
-            user.id = max_id + 1;
-            let _ = UsersInfo::add(&state.client, &user).await;
+            user.id = UsersInfo::add(&state.client, &user).await;
 
             // 3) Create table active_seesions_user_[id]
             let _ = ActiveSessions::create(&state.client, &user.id).await;

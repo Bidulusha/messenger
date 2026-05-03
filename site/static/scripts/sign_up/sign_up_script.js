@@ -1,7 +1,7 @@
 (() => {
-  // ../constants.ts
+  // constants.ts
   var PROTOCOL = "http://";
-  var DOMEN = "91.122.215.194";
+  var DOMEN = "localhost";
   var BASE_URL = PROTOCOL + DOMEN;
   var WS_URL = "ws://" + DOMEN;
   var STATIC_URL = "/static";
@@ -11,7 +11,7 @@
   var SIGN_IN_URL = BASE_URL + ":3000/sign_in";
   var CHAT_WS_URL = WS_URL + ":8080/api/chat_ws";
 
-  // form.ts
+  // sign_up/form.ts
   var Form = class {
     // Constructor
     constructor() {
@@ -42,7 +42,7 @@
     }
   };
 
-  // index.ts
+  // sign_up/index.ts
   var signUpButton = document.querySelector(".button-sign-up button");
   var form = new Form();
   form.element.addEventListener("submit", async (e) => {

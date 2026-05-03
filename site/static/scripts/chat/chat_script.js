@@ -2137,9 +2137,9 @@ ${element.content}
     }
   });
 
-  // ../constants.ts
+  // constants.ts
   var PROTOCOL = "http://";
-  var DOMEN = "91.122.215.194";
+  var DOMEN = "localhost";
   var BASE_URL = PROTOCOL + DOMEN;
   var WS_URL = "ws://" + DOMEN;
   var STATIC_URL = "/static";
@@ -2149,25 +2149,60 @@ ${element.content}
   var SIGN_IN_URL = BASE_URL + ":3000/sign_in";
   var CHAT_WS_URL = WS_URL + ":8080/api/chat_ws";
 
-  // objects/chat_info.ts
-  var ChatsInfo = class {
-    constructor(id, avatar, chat_name, members_id) {
-      this.id = id;
-      this.avatar = avatar;
-      this.chat_name = chat_name;
-      this.members_id = members_id;
+  // chat_page/objects/chats_user_with_info.ts
+  var ChatsUserWithInfo = class {
+    constructor(chat_id, chat_name, chat_avatar, with_user, members_id) {
+      if (typeof chat_id != void 0) {
+        this.chat_id = chat_id;
+        this.chat_name = chat_name;
+        this.chat_avatar = chat_avatar;
+        this.with_user = with_user;
+        this.members_id = members_id;
+      }
+    }
+    into_chats_info() {
+      return new ChatsInfo(
+        this.chat_id,
+        this.chat_avatar,
+        this.chat_name,
+        this.members_id
+      );
     }
   };
 
-  // ui_objects/sidebar.ts
+  // chat_page/objects/chat_info.ts
+  var ChatsInfo = class {
+    constructor(id, avatar, chat_name, members_id) {
+      if (id != void 0) {
+        this.id = id;
+        this.avatar = avatar;
+        this.chat_name = chat_name;
+        this.members_id = members_id;
+      }
+    }
+    intoChatUserWithInof() {
+      return new ChatsUserWithInfo(
+        this.id,
+        this.chat_name,
+        this.avatar,
+        null,
+        this.members_id
+      );
+    }
+  };
+
+  // chat_page/ui_objects/sidebar.ts
   var SidebarUI = class {
-    constructor(ws) {
+    constructor(ws, chat2) {
       // HTML elements
       this.sidebarDiv = document.querySelector("#main_sidebar");
       this.userInfoDiv = document.querySelector(".sidebar__user-info");
       this.userInfoAvatarImage = this.userInfoDiv.querySelector("img");
       this.userInfoNameDiv = this.userInfoDiv.querySelector(".sidebar__user-info__header-info__name");
       this.ws = ws;
+      this.chat = chat2;
+      this.startChat();
+      this.sendNewMessageChecker();
     }
     setupChats(chats_info) {
       console.log(chats_info);
@@ -2184,14 +2219,17 @@ ${element.content}
       chat_info_button.id = `chat_${chat2.chat_id}_info`;
       chat_info_button.classList.add("chat__info");
       chat_info_button.classList.add("sidebar-element");
-      chat_info_button.addEventListener("click", (ev) => {
-        this.ws.openChatMessage(chat2.chat_id);
+      chat_info_button.addEventListener("click", async (ev) => {
+        const chat_messages = await this.ws.openChatMessage(chat2.chat_id);
         this.currentChat = new ChatsInfo(
           chat2.chat_id,
           chat2.chat_avatar,
           chat2.chat_name,
           chat2.members_id
         );
+        if (chat_messages != null) {
+          this.chat.open_chat(this.currentChat, chat_messages);
+        }
       });
       const chat_avatar_div = document.createElement("div");
       const chat_avatar_img = document.createElement("img");
@@ -2207,11 +2245,25 @@ ${element.content}
       chat_info_button.append(chat_info_text);
       this.sidebarDiv.append(chat_info_button);
     }
-    getMessageInChat(chat_id) {
-      console.log(chat_id);
+    async startChat() {
+      for (; ; ) {
+        const req = await this.chat.newChatUpdate();
+        this.addChat(req.intoChatUserWithInof());
+        console.log(req);
+      }
+    }
+    async sendNewMessageChecker() {
+      for (; ; ) {
+        const chat_id = await this.chat.sendChatMessage();
+        this.updateInChat(chat_id);
+      }
+    }
+    updateInChat(chat_id) {
       const chat_info = document.querySelector(`#chat_${chat_id}_info`);
-      console.log(chat_info);
-      if (chat_info) this.sidebarDiv.children[1].after(chat_info);
+      if (chat_info) this.sidebarDiv.children[2].after(chat_info);
+    }
+    getMessageInChat(chat_id) {
+      this.updateInChat(chat_id);
     }
     show() {
     }
@@ -2833,7 +2885,7 @@ ${element.content}
     }
   };
 
-  // ws_messages/message.ts
+  // chat_page/ws_messages/message.ts
   var AuthRequest = class {
     constructor(user_id2, token2) {
       this.user_id = user_id2;
@@ -2841,127 +2893,16 @@ ${element.content}
     }
   };
   var UserMessage = class {
-    constructor(type, content) {
-      this.message_type = type;
-      this.content = content;
+    constructor(req_id, type, content) {
+      if (typeof type != void 0) {
+        this.req_id = req_id;
+        this.message_type = type;
+        this.content = content;
+      }
     }
   };
 
-  // websocket_connection.ts
-  var WebsocketManager = class {
-    constructor() {
-      this.ws = new WebsocketBuilder(CHAT_WS_URL).withBuffer(new ArrayQueue()).withBackoff(new ExponentialBackoff(1e3, 6)).build();
-    }
-    /*              MESSAGES                */
-    // base message
-    sendMessage(message) {
-      this.ws.send(message);
-    }
-    // start chat message
-    startChatMessage(login) {
-      this.ws.send(
-        JSON.stringify(new UserMessage(
-          "START_CHAT" /* START_CHAT */,
-          login
-        ))
-      );
-    }
-    // Authorization message
-    authorizationMessage(user_id2, token2) {
-      this.ws.send(JSON.stringify(
-        new UserMessage(
-          "AUTH_CHECK" /* AUTH_CHECK */,
-          JSON.stringify(
-            new AuthRequest(
-              user_id2,
-              token2
-            )
-          )
-        )
-      ));
-    }
-    // Get chats message
-    getChatsMessage() {
-      this.ws.send(JSON.stringify(
-        new UserMessage(
-          "GET_CHATS" /* GET_CHATS */,
-          ""
-        )
-      ));
-    }
-    // Open chat message
-    openChatMessage(chat_id) {
-      this.ws.send(JSON.stringify(
-        new UserMessage(
-          "OPEN_CHAT" /* OPEN_CHAT */,
-          chat_id.toString()
-        )
-      ));
-    }
-    // Send message to user
-    sendChatMessage(message) {
-      this.ws.send(JSON.stringify(
-        new UserMessage(
-          "SEND_MESSAGE" /* SEND_MESSAGE */,
-          JSON.stringify(message)
-        )
-      ));
-    }
-    // Send fist message
-    sendChatFirstMessage(message) {
-      this.ws.send(JSON.stringify(
-        new UserMessage(
-          "START_CHAT" /* START_CHAT */,
-          JSON.stringify(message)
-        )
-      ));
-    }
-    /*              LISTENERS              */
-    addEventListeners(open, close, message, reconnect) {
-      this.ws.addEventListener(WebsocketEvent.open, open);
-      this.ws.addEventListener(WebsocketEvent.close, close);
-      this.ws.addEventListener(WebsocketEvent.message, message);
-      this.ws.addEventListener(WebsocketEvent.reconnect, reconnect);
-    }
-  };
-
-  // objects/chats_user_with_info.ts
-  var ChatsUserWithInfo = class {
-  };
-
-  // ui_objects/pop_up/start_new_chat.ts
-  var PopUpNewChatUI = class {
-    constructor(ws_manager2) {
-      this.popUpElement = document.querySelector("#pop_up_start_new_chat");
-      this.findUser = this.popUpElement.querySelector(".pop_up__form-find_button");
-      this.backgroundElement = this.popUpElement.querySelector(".pop_up__background");
-      this.inputElement = this.popUpElement.querySelector(".pop_up__form-login_input");
-      this.formContainerElement = this.popUpElement.querySelector(".pop_up__form-container");
-      this.backgroundElement.addEventListener("click", () => this.close());
-      this.findUser.addEventListener("click", () => {
-        ws_manager2.startChatMessage(this.inputElement.value);
-      });
-      this.inputElement.addEventListener("keypress", (ev) => {
-        if (ev.keyCode == 13) {
-          ev.preventDefault();
-          ws_manager2.startChatMessage(this.inputElement.value);
-        }
-      });
-    }
-    show() {
-      this.popUpElement.style.display = "flex";
-    }
-    close() {
-      this.popUpElement.style.display = "none";
-      this.inputElement.value = "";
-    }
-  };
-
-  // objects/user_info.ts
-  var UserShortInfo = class {
-  };
-
-  // objects/chat_message.ts
+  // chat_page/objects/chat_message.ts
   var MessageContent = class {
     constructor(answer_to, forwarded_from, text_content, photos_content, files) {
       if (typeof answer_to != typeof text_content) {
@@ -2984,14 +2925,193 @@ ${element.content}
     }
   };
   var SendMessage = class {
-    constructor(id_to, first_message, what) {
+    constructor(id_to, what) {
       this.id_to = id_to;
-      this.first_message = first_message;
       this.what = what;
     }
   };
 
-  // objects/time.ts
+  // chat_page/objects/user_info.ts
+  var UserShortInfo = class {
+    constructor(id, login, avatar) {
+      if (typeof id == void 0) {
+        this.id = id;
+        this.login = login;
+        this.avatar = avatar;
+      }
+    }
+  };
+
+  // chat_page/websocket_connection.ts
+  var WebsocketManager = class {
+    constructor() {
+      this.message_req = /* @__PURE__ */ new Map();
+      this.req_max_id = 0;
+      this.timeout = 5e3;
+      this.ws = new WebsocketBuilder(CHAT_WS_URL).withBuffer(new ArrayQueue()).withBackoff(new ExponentialBackoff(1e3, 6)).build();
+      this.ws.addEventListener(WebsocketEvent.message, (i, ev) => {
+        try {
+          const req = Object.assign(new UserMessage(), JSON.parse(ev.data));
+          const req_handler = this.message_req.get(req.req_id);
+          if (req_handler == null) throw "Req id not found!";
+          req_handler(req);
+        } catch (error) {
+          console.error(error);
+        }
+      });
+    }
+    /*              MESSAGES                */
+    // Send message with request as promise
+    sendMessageRequest(message_type, content) {
+      this.ws.send(
+        JSON.stringify(
+          new UserMessage(
+            this.req_max_id,
+            message_type,
+            content
+          )
+        )
+      );
+      return new Promise((resolve) => {
+        this.message_req.set(this.req_max_id, resolve);
+        this.req_max_id = (this.req_max_id + 1) % 1e4;
+        setTimeout(() => {
+          resolve(null);
+        }, this.timeout);
+        ;
+      });
+    }
+    // New chat getter
+    async getNewChats() {
+      return new Promise((resolve) => {
+        this.message_req.set(-1 /* START_CHAT */, resolve);
+      });
+    }
+    // Message getter 
+    async getMessage() {
+      return new Promise((resolve) => {
+        this.message_req.set(-2 /* SEND_MESSAGE */, resolve);
+      });
+    }
+    // Create new chat
+    async createNewChat(avatar, chat_name, members) {
+      const req = await this.sendMessageRequest(
+        "CREATE_CHAT" /* CREATE_CHAT */,
+        JSON.stringify(new ChatsInfo(
+          -1,
+          avatar,
+          chat_name,
+          members
+        ))
+      );
+      if (req == null) return null;
+      return Object.assign(new ChatsUserWithInfo(), JSON.parse(req.content));
+    }
+    // Authorization message
+    async authorizationMessage(user_id2, token2) {
+      const req = await this.sendMessageRequest(
+        "AUTH_CHECK" /* AUTH_CHECK */,
+        JSON.stringify(
+          new AuthRequest(
+            user_id2,
+            token2
+          )
+        )
+      );
+      if (req != null && req["content"] == "ACCESS_ALLOWED") return true;
+      else return false;
+    }
+    // Get chats message
+    async getChatsMessage() {
+      const req = await this.sendMessageRequest("GET_CHATS" /* GET_CHATS */, "");
+      if (req != null) {
+        if (req.content == "USER_NOT_FOUND") return [];
+        const chats = JSON.parse(req.content);
+        console.log(chats);
+        chats.forEach((chat2, index) => {
+          chat2 = Object.assign(new ChatsUserWithInfo(), chat2);
+        });
+        return chats;
+      } else {
+        return [];
+      }
+    }
+    // Get user info
+    async getUserInfo(user_id2) {
+      const req = await this.sendMessageRequest("USER_SHORT_INFO" /* USER_SHORT_INFO */, user_id2.toString());
+      if (req != null && req.content != "USER_NOT_FOUND") {
+        return Object.assign(new UserShortInfo(), JSON.parse(req.content));
+      }
+      return null;
+    }
+    async getUserByLogin(login) {
+      const req = await this.sendMessageRequest("USER_SHORT_INFO" /* USER_SHORT_INFO */, login);
+      if (req == null) return null;
+      if (req.content == "USER_NOT_FOUND") return null;
+      return Object.assign(new UserShortInfo(), JSON.parse(req.content));
+    }
+    // Open chat message
+    async openChatMessage(chat_id) {
+      const req = await this.sendMessageRequest("OPEN_CHAT" /* OPEN_CHAT */, chat_id.toString());
+      if (req == null) return null;
+      const chat_messages = JSON.parse(req.content);
+      chat_messages.forEach((value, key) => {
+        value = Object.assign(new ChatMessages(), value);
+      });
+      return chat_messages;
+    }
+    // Send message to user
+    async sendChatMessage(message) {
+      const req = await this.sendMessageRequest("SEND_MESSAGE" /* SEND_MESSAGE */, JSON.stringify(message));
+      if (req == null) return null;
+      if (req.content == "Ok") return "Ok";
+      return Number.parseInt(req.content);
+    }
+    // DELETE ACCOUNT
+    async sendDeleteAccount() {
+      await this.sendMessageRequest("DELETE_ACCOUNT" /* DELETE_ACCOUNT */, "");
+    }
+  };
+
+  // chat_page/ui_objects/pop_up/start_new_chat.ts
+  var PopUpNewChatUI = class {
+    constructor(ws_manager2, chat2) {
+      this.popUpElement = document.querySelector("#pop_up_start_new_chat");
+      this.findUser = this.popUpElement.querySelector(".pop_up__form-find_button");
+      this.backgroundElement = this.popUpElement.querySelector(".pop_up__background");
+      this.inputElement = this.popUpElement.querySelector(".pop_up__form-login_input");
+      this.formContainerElement = this.popUpElement.querySelector(".pop_up__form-container");
+      this.ws_manager = ws_manager2;
+      this.chat = chat2;
+      this.backgroundElement.addEventListener("click", () => this.close());
+      this.findUser.addEventListener("click", () => {
+        this.sendMessageToWs();
+      });
+      this.inputElement.addEventListener("keypress", (ev) => {
+        if (ev.keyCode == 13) {
+          ev.preventDefault();
+          this.sendMessageToWs();
+        }
+      });
+    }
+    async sendMessageToWs() {
+      const req = await this.ws_manager.getUserByLogin(this.inputElement.value);
+      if (req == null) alert("User not found!");
+      else {
+        this.chat.start_chat(req);
+        this.close();
+      }
+    }
+    show() {
+      this.popUpElement.style.display = "flex";
+    }
+    close() {
+      this.popUpElement.style.display = "none";
+      this.inputElement.value = "";
+    }
+  };
+
+  // chat_page/objects/time.ts
   var Time = class {
     get isoTime() {
       return this._time;
@@ -3004,11 +3124,11 @@ ${element.content}
     }
   };
 
-  // ui_objects/chat.ts
+  // chat_page/ui_objects/chat.ts
   var import_ts_markdown_parser = __toESM(require_dist());
   var ChatUI = class {
     /*                  CONSTRUCTOR              */
-    constructor(ws, sidebar2, user_id2) {
+    constructor(ws, user_id2) {
       // Elements on page
       this.chatElement = document.querySelector("#chat_body");
       this.chatHeaderElement = this.chatElement.querySelector(".chat__header");
@@ -3027,9 +3147,10 @@ ${element.content}
       this._forwarded_from = -1;
       this._photos_content = [];
       this._files = [];
+      this.last_sender_user = -1;
+      this.users_in_chat_info = /* @__PURE__ */ new Map();
       // Markdown options
       this.md_options = { addCopyToClipboard: true, interactiveCheckboxes: false };
-      this.first_message = false;
       this.ws = ws;
       this.user_id = user_id2;
       this.close();
@@ -3044,10 +3165,21 @@ ${element.content}
     }
     set chat_id(value) {
       this.chat.id = value;
+      this.resolveUpdateFn(this.chat);
     }
     get chat_id() {
       if (this.chat != void 0) return this.chat.id;
       else return -1;
+    }
+    sendChatMessage() {
+      return new Promise((resolve) => {
+        this.resolveSendMessageFn = resolve;
+      });
+    }
+    newChatUpdate() {
+      return new Promise((resolve) => {
+        this.resolveUpdateFn = resolve;
+      });
     }
     /*                  UI METHODS                */
     show() {
@@ -3066,18 +3198,57 @@ ${element.content}
       this.chatAvatartImage.style.display = "block";
     }
     // Add message to page
-    add_message(message) {
+    add_message(message, get = false) {
+      if (get && message.id != this.chat.id) return;
       const hmtlContent = (0, import_ts_markdown_parser.markdownToHtml)(message.content.text_content, this.md_options);
       const sended_message_container = document.createElement("div");
+      const text_container = document.createElement("div");
       sended_message_container.classList.add("chat__body-text__message-container");
+      text_container.classList.add("chat__body-text__text-container");
       const sended_message_text = document.createElement("div");
+      if (this.last_sender_user != message.who_sended) {
+        const user = this.users_in_chat_info.get(this.chat.id)?.get(message.who_sended);
+        const user_name_div = document.createElement("div");
+        const user_avatar = document.createElement("img");
+        user_name_div.classList.add("sender_user_name");
+        user_avatar.classList.add("sender_avatar");
+        if (user != null) {
+          user_name_div.innerText = user.login;
+          user_avatar.src = AVATARS_URL + user.avatar;
+        }
+        sended_message_container.append(user_avatar);
+        text_container.append(user_name_div);
+      }
       if (message.who_sended == this.user_id)
         sended_message_text.classList.add("chat__body-text__sended_message");
       else sended_message_text.classList.add("chat__body-text__recieved_message");
       sended_message_text.classList.add("message-text");
       sended_message_text.innerHTML = hmtlContent;
-      sended_message_container.append(sended_message_text);
+      text_container.append(sended_message_text);
+      sended_message_container.append(text_container);
       this.chatBodyTextElement.append(sended_message_container);
+      this.last_sender_user = message.who_sended;
+    }
+    // Setup chat info
+    setupChats(chats) {
+      for (let chat2 of chats) {
+        const users_info = /* @__PURE__ */ new Map();
+        for (let member of chat2.members_id) {
+          this.ws.getUserInfo(member).then((value) => {
+            users_info.set(member, value);
+          });
+        }
+        this.users_in_chat_info.set(chat2.chat_id, users_info);
+      }
+    }
+    addNewChatInfo(chat2) {
+      const users_info = /* @__PURE__ */ new Map();
+      for (let member of chat2.members_id) {
+        this.ws.getUserInfo(member).then((value) => {
+          users_info.set(member, value);
+        });
+      }
+      this.users_in_chat_info.set(chat2.chat_id, users_info);
     }
     /*                  MESSAGE METHODS              */
     open_chat(chat2, messages) {
@@ -3090,12 +3261,11 @@ ${element.content}
     }
     start_chat(user_info) {
       this.close();
-      this.first_message = true;
       this.chat = new ChatsInfo(
-        user_info.chat_id,
-        user_info.chat_avatar,
-        user_info.chat_name,
-        user_info.members_id
+        user_info.id,
+        user_info.avatar,
+        user_info.login,
+        [user_info.id, this.user_id]
       );
       this.show();
     }
@@ -3111,13 +3281,24 @@ ${element.content}
         this._photos_content,
         this._files
       );
+      this.resolveSendMessageFn(this.chat_id);
       this.ws.sendChatMessage(
         new SendMessage(
           this.chat_id,
-          this.first_message,
           message
         )
-      );
+      ).then((answer) => {
+        if (answer == null) {
+          console.error("ERROR SENDING MESSAGE!");
+          return;
+        }
+        if (answer == "Ok") {
+          console.log("Message sended succesfuly!");
+          return;
+        }
+        this.chat.id = answer;
+        console.log("Created new chat!");
+      });
       this.add_message(
         new ChatMessages(
           this._message_id,
@@ -3128,116 +3309,186 @@ ${element.content}
       );
       this.chatInputField.innerText = "";
       this.chatBodyTextElement.scroll(0, this.chatBodyTextElement.scrollHeight);
-      this.first_message = false;
       this._message_id++;
     }
   };
 
-  // index.ts
+  // chat_page/ui_objects/pop_up/user_settings.ts
+  var PopUpUserSettings = class {
+    constructor(user_id2, ws_manager2) {
+      this.popUpElement = document.querySelector("#pop_up_start_user_settings");
+      this.backgroundElement = this.popUpElement.querySelector(".pop_up__background");
+      this.deleteAccountButton = this.popUpElement.querySelector(".pop_up__form-delete_account");
+      this.exitAccountButton = this.popUpElement.querySelector(".pop_up__form-exit");
+      this.ws_manager = ws_manager2;
+      this.backgroundElement.addEventListener("click", () => this.close());
+      this.exitAccountButton.addEventListener("click", () => {
+        window.localStorage.removeItem("access_token");
+        window.localStorage.removeItem("user_id");
+        window.location.replace("/sign_in");
+      });
+      this.deleteAccountButton.addEventListener("click", () => {
+        this.ws_manager.sendDeleteAccount();
+        window.localStorage.removeItem("access_token");
+        window.localStorage.removeItem("user_id");
+        window.location.replace("/sign_in");
+      });
+    }
+    show() {
+      this.popUpElement.style.display = "flex";
+    }
+    close() {
+      this.popUpElement.style.display = "none";
+    }
+  };
+
+  // chat_page/ui_objects/pop_up/new_group_chat.ts
+  var PopUpStartNewGroupChat = class {
+    constructor(ws_manager2, chat2, user_id2) {
+      this.popUpElement = document.querySelector("#pop_up_start_new_group_chat");
+      this.backgroundElement = this.popUpElement.querySelector(".pop_up__background");
+      this.formContainerElement = this.popUpElement.querySelector(".pop_up__form-container");
+      this.usersContainer = this.popUpElement.querySelector(".pop_up__form-users");
+      this.chatNameInputElement = this.popUpElement.querySelector(".pop_up__form-chat_name");
+      this.userInputElement = this.popUpElement.querySelector(".pop_up__form-login_input");
+      this.findUserContainer = this.popUpElement.querySelector(".pop_up__form-container");
+      this.findUserButton = this.popUpElement.querySelector(".pop_up__form-find_button");
+      this.createNewChatButton = this.popUpElement.querySelector(".pop_up__form-start_chat");
+      this.users = [];
+      this.ws_manager = ws_manager2;
+      this.user_id = user_id2;
+      this.chat = chat2;
+      this.backgroundElement.addEventListener("click", () => this.close());
+      this.findUserButton.addEventListener("click", async () => {
+        await this.findUserAndAdd();
+      });
+      this.userInputElement.addEventListener("keypress", async (ev) => {
+        if (ev.keyCode == 13) {
+          ev.preventDefault();
+          await this.findUserAndAdd();
+        }
+      });
+      this.createNewChatButton.addEventListener("click", async (ev) => {
+        if (this.chatNameInputElement.value.replace(" ", "") == "") {
+          alert("\u041D\u0430\u0437\u0432\u0430\u043D\u0438\u0435 \u043D\u0435 \u043C\u043E\u0436\u0435\u0442 \u0431\u044B\u0442\u044C \u043F\u0443\u0441\u0442\u044B\u043C!");
+          return;
+        }
+        this.users.push(this.user_id);
+        const req = await this.ws_manager.createNewChat(
+          "ph.png",
+          this.chatNameInputElement.value,
+          this.users
+        );
+        if (req == null) alert("\u041E\u0448\u0438\u0431\u043A\u0430 \u043F\u0440\u0438 \u0441\u043E\u0437\u0434\u0430\u043D\u0438\u0438 \u0447\u0430\u0442\u0430!");
+        else {
+          this.chat.open_chat(req.into_chats_info(), []);
+          this.users = [];
+          this.close();
+        }
+      });
+    }
+    async findUserAndAdd() {
+      const req = await this.ws_manager.getUserByLogin(this.userInputElement.value);
+      if (req == null) {
+        alert("User not found!");
+      } else if (req.id == this.user_id) {
+        alert("\u042D\u0442\u043E \u0432\u044B!");
+      } else {
+        this.users.push(req.id);
+        const userContainer = document.createElement("div");
+        userContainer.classList.add("user-info");
+        const userAvatar = document.createElement("img");
+        userAvatar.classList.add("user-avatar");
+        userAvatar.src = AVATARS_URL + req.avatar;
+        const userLogin = document.createElement("div");
+        userLogin.classList.add("user-login");
+        userLogin.innerText = req.login;
+        userContainer.append(userAvatar);
+        userContainer.append(userLogin);
+        this.usersContainer.append(userContainer);
+        this.userInputElement.value = "";
+      }
+    }
+    show() {
+      this.popUpElement.style.display = "flex";
+    }
+    close() {
+      this.popUpElement.style.display = "none";
+      this.userInputElement.value = "";
+    }
+  };
+
+  // chat_page/index.ts
   var user_id = parseInt(localStorage.getItem("user_id"));
   var token = localStorage.getItem("access_token");
   var ws_manager = new WebsocketManager();
-  var sidebar = new SidebarUI(ws_manager);
-  var pop_up_new_chat = new PopUpNewChatUI(ws_manager);
-  var chat = new ChatUI(ws_manager, sidebar, user_id);
-  var initialized = false;
-  if (token != null && !Number.isNaN(user_id)) {
-    ws_manager.addEventListeners(
-      // On open
-      async () => {
-        console.log("Open connection!");
-        ws_manager.authorizationMessage(user_id, token);
-      },
-      // On close 
-      async () => {
-        console.log("Close connection!");
-      },
-      // On message
-      async (i, ev) => {
-        try {
-          const ans = JSON.parse(ev.data);
-          switch (ans["message_type"]) {
-            // Auth check
-            case "AUTH_CHECK" /* AUTH_CHECK */: {
-              if (ans["content"] == "ACCESS_DENIED") {
-                localStorage.removeItem("access_token");
-                localStorage.removeItem("user_id");
-                window.location.replace("/sign_in");
-              } else {
-                console.log("Access to user allowed!");
-                console.log(initialized);
-                if (!initialized) {
-                  initialized = true;
-                  await ws_manager.getChatsMessage();
-                }
-              }
-              break;
-            }
-            // Get user short info
-            case "USER_SHORT_INFO" /* USER_SHORT_INFO */: {
-              const user_info = Object.assign(new UserShortInfo(), JSON.parse(ans["content"]));
-              console.log(user_info);
-              sidebar.setUserInfo(user_info);
-              break;
-            }
-            // Get chats
-            case "GET_CHATS" /* GET_CHATS */: {
-              const chats = JSON.parse(ans["content"]);
-              chats.forEach((chat2, index) => {
-                chat2 = Object.assign(new ChatsUserWithInfo(), chat2);
-              });
-              sidebar.setupChats(chats);
-              break;
-            }
-            case "START_CHAT" /* START_CHAT */: {
-              if (ans["content"] == "USER_NOT_FOUND") {
-                alert("\u041F\u043E\u043B\u044C\u0437\u043E\u0432\u0430\u0442\u0435\u043B\u044C \u043D\u0435 \u0441\u0443\u0449\u0435\u0441\u0442\u0432\u0443\u0435\u0442!");
-                break;
-              }
-              pop_up_new_chat.close();
-              const short_info = Object.assign(new ChatsUserWithInfo(), JSON.parse(ans["content"]));
-              chat.start_chat(short_info);
-              break;
-            }
-            case "OPEN_CHAT" /* OPEN_CHAT */: {
-              if (ans["content"] == "CHAT_NOT_FOUND") {
-                alert("\u0427\u0430\u0442\u0430 \u043D\u0435 \u0441\u0443\u0449\u0435\u0441\u0442\u0432\u0443\u0435\u0442!");
-                break;
-              }
-              const chat_messages = JSON.parse(ans["content"]);
-              chat_messages.forEach((message, ind) => {
-                message = Object.assign(new ChatMessages(), message);
-              });
-              chat.open_chat(sidebar.currentChat, chat_messages);
-              break;
-            }
-            case "CREATE_CHAT" /* CREATE_CHAT */: {
-              const chat_info = Object.assign(new ChatsUserWithInfo(), JSON.parse(ans["content"]));
-              chat.chat_id = chat_info.chat_id;
-              sidebar.addChat(chat_info);
-              break;
-            }
-            case "SEND_MESSAGE" /* SEND_MESSAGE */: {
-              const message = Object.assign(new ChatMessages(), JSON.parse(ans["content"]));
-              message.content = Object.assign(new MessageContent(), message.content);
-              console.log(message.id);
-              if (message.id == chat.chat_id) chat.add_message(message);
-              sidebar.getMessageInChat(message.id);
-              break;
-            }
-          }
-        } catch (error) {
-          console.log("Server message: ", ev.data);
-        }
-      },
-      () => {
-        console.log("recconect");
+  var chat = new ChatUI(ws_manager, user_id);
+  var sidebar = new SidebarUI(ws_manager, chat);
+  var pop_up_new_chat = new PopUpNewChatUI(ws_manager, chat);
+  var pop_up_user_settings = new PopUpUserSettings(user_id, ws_manager);
+  var pop_up_new_group_chat = new PopUpStartNewGroupChat(ws_manager, chat, user_id);
+  async function getNewChats() {
+    for (; ; ) {
+      const req = await ws_manager.getNewChats();
+      if (req != null) {
+        const new_chat_info = Object.assign(new ChatsUserWithInfo(), JSON.parse(req.content));
+        sidebar.addChat(new_chat_info);
+        sidebar.updateInChat(new_chat_info.chat_id);
+        chat.addNewChatInfo(new_chat_info);
       }
-    );
+    }
+  }
+  async function getMessages() {
+    for (; ; ) {
+      const req = await ws_manager.getMessage();
+      if (req != null) {
+        const message = Object.assign(new ChatMessages(), JSON.parse(req.content));
+        chat.add_message(message, true);
+        sidebar.getMessageInChat(message.id);
+      }
+    }
+  }
+  function addEventListeners() {
+    const user_info_settings_button = document.querySelector("#sidebar__user-info");
+    user_info_settings_button?.addEventListener("click", (event) => {
+      pop_up_user_settings.show();
+    });
     const create_new_chat_button = document.querySelector("#sidebar__create-chat");
     create_new_chat_button?.addEventListener("click", (event) => {
       pop_up_new_chat.show();
     });
+    const create_new_group_chat_button = document.querySelector("#sidebar__create-group-chat");
+    create_new_group_chat_button?.addEventListener("click", (event) => {
+      pop_up_new_group_chat.show();
+    });
+  }
+  async function main(user_id2, token2) {
+    const auth_req = await ws_manager.authorizationMessage(user_id2, token2);
+    if (!auth_req) {
+      localStorage.removeItem("access_token");
+      localStorage.removeItem("user_id");
+      window.location.replace("/sign_in");
+    }
+    addEventListeners();
+    ws_manager.getUserInfo(user_id2).then((user_info) => {
+      if (user_info == null) throw "USER NOT FOUND!";
+      sidebar.setUserInfo(user_info);
+    });
+    ws_manager.getChatsMessage().then((chats) => {
+      if (chats == null) throw "NULL CHATS!";
+      sidebar.setupChats(chats);
+      chat.setupChats(chats);
+    });
+    getMessages();
+    getNewChats();
+    console.log("INITIALIZED!");
+  }
+  if (token != null && !Number.isNaN(user_id)) {
+    try {
+      main(user_id, token);
+    } catch (error) {
+      window.location.reload();
+    }
   } else {
     localStorage.removeItem("access_token");
     localStorage.removeItem("user_id");

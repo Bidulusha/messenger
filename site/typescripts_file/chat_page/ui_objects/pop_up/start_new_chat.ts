@@ -1,5 +1,7 @@
+import { UserShortInfo } from "../../objects/user_info";
 import { WebsocketManager } from "../../websocket_connection";
 import { UserMessage, MessageType } from "../../ws_messages/message";
+import { ChatUI } from "../chat";
 import { PopUpUI } from "./pop_up_interface";
 
 export class PopUpNewChatUI implements PopUpUI {
@@ -9,21 +11,34 @@ export class PopUpNewChatUI implements PopUpUI {
     inputElement: HTMLInputElement = this.popUpElement.querySelector(".pop_up__form-login_input")!;
     formContainerElement: HTMLElement = this.popUpElement.querySelector(".pop_up__form-container")!;
 
-    constructor(ws_manager: WebsocketManager) { 
+    ws_manager: WebsocketManager;
+    chat: ChatUI;
+
+    constructor(ws_manager: WebsocketManager, chat: ChatUI) { 
+        this.ws_manager = ws_manager;
+        this.chat = chat;
         this.backgroundElement.addEventListener("click", () => this.close());
 
         // send message
         this.findUser.addEventListener("click", () => {
-            ws_manager.startChatMessage(this.inputElement.value);
+            this.sendMessageToWs();
         });
 
         this.inputElement.addEventListener("keypress", (ev) => {
             if (ev.keyCode == 13) { 
                 ev.preventDefault();
-                ws_manager.startChatMessage(this.inputElement.value);
-                
+                this.sendMessageToWs();
             }
         })
+    }
+
+    async sendMessageToWs() {
+        const req = await this.ws_manager.getUserByLogin(this.inputElement.value);
+        if (req == null) alert("User not found!");
+        else {
+            this.chat.start_chat(req);
+            this.close();
+        }
     }
 
     show() {

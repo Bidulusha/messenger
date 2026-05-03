@@ -6,11 +6,15 @@ pub mod struct_functions;
 // Std
 use std::hash::{Hash};
 
+
 // Chrono
 use chrono::{NaiveTime};
 
 // serde
 use serde::{Serialize, Deserialize};
+
+// tokio postgres
+use tokio_postgres::{Client, Connection, Error, NoTls, Socket, tls::NoTlsStream};
 
 // postgres_types
 use postgres_types::{ToSql, FromSql};
@@ -44,7 +48,7 @@ pub struct ChatsUser{
     pub id: i32,
     pub chat_id: i32,
     pub with: Option<i32>,
-    pub last_change: NaiveTime
+    pub last_change: Option<NaiveTime>
 }
 
 // Chats info
@@ -82,4 +86,28 @@ pub struct ActiveSessions {
     pub token: String
 }
 
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct UserShortInfo {
+    pub id: i32,
+    pub login: String,
+    pub avatar: String
+}
+pub async fn create_postgresql_client()  -> Result<(Client, Connection<Socket, NoTlsStream>), Error>{ 
+    //init dotenv
+    dotenv::dotenv().ok();
 
+    //init database
+    let db_host = std::env::var("POSTGRES_HOST").expect("POSTGRES_HOST must be set!");
+    let db_port = std::env::var("POSTGRES_PORT").expect("POSTGRES_PORT must be set!");
+    let db_name = std::env::var("POSTGRES_DB").expect("POSTGRES_DB must be set!");
+    let db_user = std::env::var("POSTGRES_USER").expect("POSTGRES_USER must be set!");
+    let db_password = std::env::var("POSTGRES_PASSWORD").expect("POSTGRES_PASSWORD must be set");
+
+    let (client, connection) = 
+        tokio_postgres::connect(&format!(
+                "host={} port={} dbname={} user={} password={}", 
+                db_host, db_port, db_name, db_user, db_password
+            ), NoTls).await?;
+
+    Ok((client, connection))
+}

@@ -1,0 +1,19 @@
+#pop_up_start_new_group_chat section { 
+    border-bottom: 1px solid #d5d5d5;
+    padding: 0.4em 0;
+}
+
+.user-info {
+    display: flex;
+}
+
+.user-avatar {
+    width: 2rem;
+    height: 2rem;
+    border-radius: 50%;
+}
+
+.pop_up__form-users {
+    max-height: 10rem;
+    overflow-y: scroll;
+}

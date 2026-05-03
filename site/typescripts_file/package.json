@@ -1,6 +1,16 @@
 {
   "dependencies": {
     "esbuild": "^0.28.0",
+    "ts-markdown-parser": "^1.5.1",
     "websocket-ts": "^2.3.0"
+  },
+  "devDependencies": {
+    "concurrently": "^9.2.1"
+  },
+  "scripts": {
+    "build_chat_page": "esbuild ./chat_page/index.ts --bundle --outfile=../static/scripts/chat/chat_script.js --watch",
+    "build_sign_in": "esbuild ./sign_in/index.ts --bundle --outfile=../static/scripts/sign_in/sign_in_script.js --watch",
+    "build_sign_up": "esbuild ./sign_up/index.ts --bundle --outfile=../static/scripts/sign_up/sign_up_script.js --watch",
+    "build": "concurrently \"npm run build_chat_page\" \"npm run build_sign_in\" \"npm run build_sign_up\""
   }
 }

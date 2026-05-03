@@ -11,6 +11,7 @@
     <link href="/static/styles/chat_page/chat_info.css" rel="stylesheet">
     <link href="/static/styles/chat_page/sidebar.css" rel="stylesheet">
     <link href="/static/styles/chat_page/sidebar_user_info.css" rel="stylesheet">
+    <link href="/static/styles/chat_page/pop_up_new_group_chat.css" rel="stylesheet">
 
     <!-- TEMPRORARY SOLUTION -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -21,6 +22,17 @@
 <body>
     <main>
         <!--                        POP UP                          -->
+        <!-- pop up user settings -->
+        <div id="pop_up_start_user_settings" class="pop_up">
+            <div class = "pop_up__background"></div>
+            <div class="pop_up__form-container">
+                <div class="pop_up__form">
+                    <button class="pop_up__form-delete_account">Удалить аккаунт</button>
+                    <button class="pop_up__form-exit">Выйти</button>
+                </div>
+            </div>
+        </div>
+
         <!-- pop up start new chat -->
         <div id="pop_up_start_new_chat" class="pop_up">
             <div class = "pop_up__background"></div>
@@ -38,9 +50,18 @@
             <div class = "pop_up__background"></div>
             <div class="pop_up__form-container">
                 <div class="pop_up__form">
-                    <h1>Найти пользователя</h1>
-                    <input class="pop_up__form-login_input" placeholder="Логин пользователя">
-                    <button class="pop_up__form-find_button">Найти</button>
+                    <h1>Создать новый групповой чат</h1>
+                    <section>
+                        <input class="pop_up__form-chat_name" placeholder="Введите название чата" required>
+                    </section>
+                    <section>
+                        <input class="pop_up__form-login_input" placeholder="Логин пользователя">
+                        <button class="pop_up__form-find_button">Добавить</button>
+                    </section>
+                    <section class="pop_up__form-users"></section>
+                    <section>
+                        <button class="pop_up__form-start_chat" type="submit">Создать чат</button>
+                    </section>
                 </div>
             </div>
         </div>
@@ -59,7 +80,7 @@
             <button id="sidebar__create-chat" class="sidebar__create-chat sidebar-element">
                 <div>Найти пользователя</div>
             </button>
-            <button id="sidebar__create-chat" class="sidebar__create-chat sidebar-element">
+            <button id="sidebar__create-group-chat" class="sidebar__create-group-chat sidebar-element">
                 <div>Начать новый чат</div>
             </button>
         </div>

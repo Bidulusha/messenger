@@ -5,7 +5,8 @@ export enum MessageType {
     OPEN_CHAT = "OPEN_CHAT",
     SEND_MESSAGE = "SEND_MESSAGE",
     START_CHAT = "START_CHAT",
-    CREATE_CHAT = "CREATE_CHAT"
+    CREATE_CHAT = "CREATE_CHAT",
+    DELETE_ACCOUNT = "DELETE_ACCOUNT"
 }
 
 export class AuthRequest {
@@ -19,11 +20,15 @@ export class AuthRequest {
 }
 
 export class UserMessage {
+    req_id: number;
     message_type: MessageType;
-    content: String;
+    content: string;
 
-    constructor (type: MessageType, content: String) {
-        this.message_type = type;
-        this.content = content;
+    constructor (req_id: number | void, type: MessageType | void, content: string | void) {
+        if (typeof(type) != undefined) {
+            this.req_id = req_id!;
+            this.message_type = type!;
+            this.content = content!;
+        }
     }
 }

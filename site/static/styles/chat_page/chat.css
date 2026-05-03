@@ -73,16 +73,18 @@
 }
 
 .chat__body-text__message-container {
-    margin-left: auto;
-    margin-right: auto;
+    margin: 1em auto;
+    display: flex;
+    width: 85%;
+}
 
-    width: 80%;
+.chat__body-text__text-container {
+    width: 100%;
+    /* margin-left: 4rem; */
 }
 
 .message-text {
-    margin: 1rem;
-
-    padding: 0.8rem;
+    grid-area: c;
     border-radius: var(--border-radius-messages);
 
     overflow-wrap: break-word;
@@ -92,7 +94,20 @@
 
 .message-text { 
     width: fit-content;
-    max-width: 80%;
+    /* max-width: 80%; */
+}
+
+.sender_user_name {
+    color: blue;
+}
+
+.sender_avatar {
+    position: relative;
+    margin-left: -2rem;
+
+    width: 2rem;
+    height: 2rem;
+    border-radius: 50%;
 }
 
 .message-text p {
@@ -101,17 +116,11 @@
 }
 
 .chat__body-text__sended_message {
-    background-color: greenyellow;
-    
-    margin-right: 0;
-    margin-left: auto;
+    margin-left: 0;
+    margin-right: auto;
 }
 
 .chat__body-text__recieved_message {
-    margin: 1em 0;
-
-    background-color: aqua;
-    border-radius: var(--border-radius-messages);
     margin-left: 0;
     margin-right: auto;
 }

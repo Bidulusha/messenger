@@ -7,6 +7,7 @@ use crate::database::{
 // std
 use std::{sync::Arc};
 
+use chrono::format;
 // colored
 use colored::Colorize;
 
@@ -50,54 +51,74 @@ impl UsersInfo {
             }
     }
     /*          get user         */
-    pub async fn get_by_login(client: &Arc<Client>, login: &String) -> Vec<UsersInfo> {
+    pub async fn get_by_login(client: &Arc<Client>, login: &String) -> Result<Vec<UsersInfo>, ()> {
         match client
             .query("select * from users_info where login = $1 or email = $1", &[login])
             .await {
                 Ok(data) => {
                     if data.is_empty() {
                         println!("{}", format!("No user found with login/email: {}", login).yellow());
+                        return Err(())
                     } else {
                         println!("{}", format!("Found {} user(s) with login/email: {}", data.len(), login).green());
                     }
-                    data.into_iter().map(Into::into).collect()
+                    Ok(data.into_iter().map(Into::into).collect())
                 }
                 Err(err) => {
                     eprintln!("{}", format!("Can't select user by login! Error message: {:?}", err).red());
-                    vec![]
+                    Err(())
                 }
             }
     }
 
-    pub async fn get_by_user_id(client: &Arc<Client>, user_id: &i32) -> Vec<UsersInfo>{
+    pub async fn get_by_user_id(client: &Arc<Client>, user_id: &i32) -> Result<UsersInfo, ()>{
         match client
             .query("select * from users_info where id = $1", &[user_id])
             .await {
                 Ok(data) => {
                     if data.is_empty() {
                         println!("{}", format!("No user found with ID: {}", user_id).yellow());
+                        return Err(())
                     } else {
                         println!("{}", format!("Found user with ID: {}", user_id).green());
                     }
-                    data.into_iter().map(Into::into).collect()
+                    Ok(data[0].clone().into())
                 }
                 Err(err) => {
                     eprintln!("{}", format!("Can't select user by ID! Error message: {:?}", err).red());
-                    vec![]
+                    Err(())
                 }
             }
         }
 
     /*          Add new user     */
-    pub async fn add(client: &Arc<Client>, data: &UsersInfo) -> Result<(), Error> {
+    pub async fn add(client: &Arc<Client>, data: &UsersInfo) -> i32 {
         match client.query("insert into users_info(email, login, password, avatar) \
-                values($1, $2, $3, $4)",
+                values($1, $2, $3, $4) \
+                returning id",
                 &[&data.email, &data.login, &data.password, &data.avatar]
             ).await {
-                Ok(_) => {println!("{}", "Add new user!".green())}
-                Err(err) => {println!("{}", format!("Cannot add new user! Error: {:?}", err).red())}
+                Ok(data) => {
+                    println!("{}", "Add new user!".green());
+                    data[0].get("id")
+                }
+                Err(err) => {
+                    println!("{}", format!("Cannot add new user! Error: {:?}", err).red());
+                    -1
+                }
             }
-        Ok(())
+    }
+
+    /*          Delete user      */
+    pub async fn delete(client: &Arc<Client>, user_id: &i32) {
+        match client.query("\
+            DELETE FROM users_info \
+            WHERE id = $1\
+            ", &[user_id]
+        ).await {
+            Ok(_) => {println!("{}", format!("User {} deleted successfully!", user_id).green())}
+            Err(err) => {println!("{}", format!("Cannot delete user! Error: {:?}", err).red())}
+        } 
     }
 }
 
@@ -164,6 +185,17 @@ impl ActiveSessions {
             }
             Ok(())
     }
+
+    pub async fn delete(client: &Arc<Client>, user_id: &i32) {
+        match client.query(&format!("\
+            DROP TABLE active_sessions_user_{}", user_id), &[]
+        ).await {
+            Ok(_) => {println!("{}", format!("Succesful deleted table active session for user {}", user_id).green())}
+            Err(err) => {
+                println!("{}", format!("Cannot delete table active session for user {}! Error: {:?}", user_id, err).red())
+            }
+        }
+    }
 }
 
 impl ChatsUser {
@@ -172,7 +204,7 @@ impl ChatsUser {
             create table if not exists public.chats_user_{user_id} (\
                 id integer NOT NULL GENERATED ALWAYS AS IDENTITY (INCREMENT 1 START 1 MINVALUE 1 MAXVALUE 2147483647 CACHE 1),\
                 chat_id integer NOT NULL references chats_info(id),\
-                with_user integer references users_info(id), \
+                with_user integer, \
                 last_change time not null \
             );"), &[]).await {
                 Ok(_) => {println!("{}", format!("Create chats_user_{} table!", user_id).green())}
@@ -198,23 +230,29 @@ impl ChatsUser {
     pub async fn select_all_join_chat_info(client: &Arc<Client>, user_id: &i32) -> Vec<ChatsUserWithInfo> {
         match client.query(
             &format!("\
-            SELECT \
-                cu.chat_id, \
-                CASE \
-                    WHEN cu.with_user IS NULL THEN ci.chat_name \
+           SELECT 
+            cu.chat_id, \
+            CASE \
+                WHEN cu.with_user IS NULL THEN ci.chat_name \
+                ELSE \
+                    CASE WHEN ui.login IS NULL THEN 'deleted' \
                     ELSE ui.login \
-                END AS chat_name, \
-                CASE \
-                    WHEN cu.with_user IS NULL THEN ci.avatar \
+                END \
+            END AS chat_name, \
+            CASE \
+                WHEN cu.with_user IS NULL THEN ci.avatar \
+                ELSE \
+                    CASE WHEN ui.avatar IS NULL THEN 'deleted.png' \
                     ELSE ui.avatar \
-                END AS chat_avatar, \
-                cu.with_user, \
-                COALESCE(ci.members_id, ARRAY[]::integer[]) AS members_id, \
-                cu.last_change \
+                END \
+            END AS chat_avatar, \
+            cu.with_user, \
+            COALESCE(ci.members_id, ARRAY[]::integer[]) AS members_id, \
+            cu.last_change \
             FROM chats_user_{} cu \
             LEFT JOIN chats_info ci ON cu.chat_id = ci.id \
             LEFT JOIN users_info ui ON cu.with_user = ui.id \
-            ORDER BY cu.last_change \
+            ORDER BY cu.last_change DESC\
         ", user_id), &[]
         ).await {
             Ok(data) => {
@@ -228,7 +266,7 @@ impl ChatsUser {
         }
     }
 
-    pub async fn select_chat_join_chat_info(client: &Arc<Client>, user_id: &i32, chat_id: &i32) -> Vec<ChatsUserWithInfo> {
+    pub async fn select_chat_join_chat_info(client: &Arc<Client>, user_id: &i32, chat_id: &i32) -> Result<ChatsUserWithInfo, ()> {
         match client.query(
             &format!("\
             SELECT \
@@ -251,23 +289,76 @@ impl ChatsUser {
         ).await {
             Ok(data) => {
                 println!("{}", format!("Successfully joined chat info for user {}", user_id).green());
-                data.into_iter().map(Into::into).collect()
+                if data.len() > 0 {
+                    return Ok(data[0].clone().into())
+                }
+                Err(())
             }
             Err(err) => {
                 eprintln!("{}", format!("Cannot select chat group with user info! Error: {:?}", err).red());
-                vec![]
+                Err(())
             }
         }
     }
+
+    pub async fn find_chat(client: &Arc<Client>, user_id: &i32, id: &i32) -> bool{
+        match client.query(&format!("\
+        select id from public.chats_user_{} \
+        where chat_id = $1 or with_user = $1", user_id), &[id]
+    ).await {
+        Ok(data) => {
+            data.len() > 0 
+        }
+        Err(err) => {
+            eprintln!("{}", format!("Cannot find chat! Error: {:?}", err).red());
+            false
+        }
+    }
+
+    }
     
-    pub async fn add_chat(client: &Arc<Client>, user_id: &i32, chat_id: &i32, with_user: Option<&i32>) -> Result<(), Error> {
+    pub async fn add_chat(client: &Arc<Client>, user_id: &i32, chat_id: &i32, with_user: Option<&i32>) -> Result<(), ()> {
         match client.execute(&format!("\
-            insert into public.chats_user_{} (chat_id, with_user) values ($1, $2)", 
-            user_id), &[&chat_id, &with_user]).await {
-                Ok(_) => {println!("{}", format!("Added chat {} for user {}", chat_id, user_id).green())}
-                Err(err) => {println!("{}", format!("Cannot add chat for user! Error: {:?}", err).red())}
+            insert into public.chats_user_{} (chat_id, with_user, last_change) values ($1, $2, $3)", 
+            user_id), &[&chat_id, &with_user, &chrono::Utc::now().time()]).await {
+                Ok(_) => {
+                    println!("{}", format!("Added chat {} for user {}", chat_id, user_id).green()); 
+                    return Ok(())
+                }
+                Err(err) => {
+                    println!("{}", format!("Cannot add chat for user! Error: {:?}", err).red()); 
+                    return Err(())
+                }
             }
-            Ok(())
+    }
+
+    pub async fn update_last_change(client: &Arc<Client>, user_id: &i32, chat_id: &i32) -> Result<(), ()>  {
+        match client.execute(&format!("\
+            UPDATE public.chats_user_{} \
+            SET last_change = $1 \
+            WHERE id = $2", 
+            user_id), &[&chrono::Utc::now().time(), chat_id]).await {
+                Ok(_) => {
+                    println!("{}", format!("Added chat {} for user {}", chat_id, user_id).green());
+                    return Ok(())
+                }
+                Err(err) => {
+                    println!("{}", format!("Cannot add chat for user! Error: {:?}", err).red());
+                    return Err(())
+                }
+            }
+    }
+
+    pub async fn delete(client: &Arc<Client>, user_id: &i32) {
+        match client.query(
+            &format!("drop table chats_user_{}", user_id), 
+            &[]
+        ).await {
+            Ok(_) => {println!("{}", format!("Chats user {} table successfully deleted!", user_id).green())}
+            Err(err) => {
+                println!("{}", format!("Cannot delete chats_user_{} table! Error: {:?}", user_id, err).red())
+            }
+        }
     }
 }
 
@@ -326,7 +417,7 @@ impl ChatMessage {
         match client.query(&format!("\
             create table if not exists public.chat_message_{}( \
             id integer NOT NULL GENERATED ALWAYS AS IDENTITY (INCREMENT 1 START 1 MINVALUE 1 MAXVALUE 2147483647 CACHE 1),\
-            who_sended integer NOT NULL references users_info(id),\
+            who_sended integer NOT NULL,\
             send_time time NOT NULL, \
             content MessageContent NOT NULL\
         );", chat_id), &[]).await {

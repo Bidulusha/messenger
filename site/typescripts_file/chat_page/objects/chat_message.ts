@@ -48,16 +48,13 @@ export class ChatMessages {
 
 export class SendMessage {
     id_to: number;
-    first_message: boolean;
     what: MessageContent;
 
     constructor(
         id_to: number,
-        first_message: boolean,
         what: MessageContent
     ) {
         this.id_to = id_to;
-        this.first_message = first_message;
         this.what = what;
     }
 }

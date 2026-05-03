@@ -1,9 +1,9 @@
 /*              Includes                 */
 
 // crates
-use crate::database::{
-    ChatMessage, ChatsInfo, ChatsUser, ChatsUserWithInfo, UsersInfo
-};
+use crate::{database::{
+    ChatMessage, ChatsInfo, ChatsUser, ChatsUserWithInfo, UserShortInfo, UsersInfo
+}, structures::answers::UserShortInfoWithChatId};
 
 // tokio postgres
 use tokio_postgres::Row;
@@ -80,5 +80,15 @@ impl From<UsersInfo> for ChatsUserWithInfo{
             with_user: Some(item.id), 
             members_id: vec![]
         } 
+    }
+}
+
+impl From<UsersInfo> for UserShortInfo {
+    fn from(item: UsersInfo) -> Self {
+        UserShortInfo {
+            id: item.id,
+            login: item.login,
+            avatar: item.avatar
+        }
     }
 }

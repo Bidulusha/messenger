@@ -1794,6 +1794,7 @@ version = "0.1.0"
 dependencies = [
  "chrono",
  "colored",
+ "dotenv",
  "postgres-types",
  "serde",
  "tokio-postgres",

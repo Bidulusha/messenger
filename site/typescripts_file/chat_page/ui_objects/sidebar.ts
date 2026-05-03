@@ -13,16 +13,21 @@ export class SidebarUI implements ObjectUI {
     userInfoAvatarImage: HTMLImageElement = this.userInfoDiv.querySelector("img")!;
     userInfoNameDiv: HTMLDivElement = this.userInfoDiv.querySelector(".sidebar__user-info__header-info__name")!;
 
-
     // WS manager
     ws: WebsocketManager;
+
+    // Chat manager
+    chat: ChatUI;
     
     // Chat info
     currentChat: ChatsInfo;
 
 
-    constructor(ws: WebsocketManager){
+    constructor(ws: WebsocketManager, chat: ChatUI){
         this.ws = ws;
+        this.chat = chat;
+        this.startChat();
+        this.sendNewMessageChecker();
     }
 
     setupChats(chats_info: ChatsUserWithInfo[]) {
@@ -42,15 +47,18 @@ export class SidebarUI implements ObjectUI {
         chat_info_button.id = `chat_${chat.chat_id}_info`;
         chat_info_button.classList.add("chat__info");
         chat_info_button.classList.add("sidebar-element");
-        chat_info_button.addEventListener("click", (ev) => {
-            this.ws.openChatMessage(chat.chat_id);
+        chat_info_button.addEventListener("click", async (ev) => {
+            const chat_messages = await this.ws.openChatMessage(chat.chat_id);
             this.currentChat = new ChatsInfo(
                 chat.chat_id,
                 chat.chat_avatar,
                 chat.chat_name,
                 chat.members_id
             );
-        })
+            if (chat_messages != null) {
+                this.chat.open_chat(this.currentChat, chat_messages);
+            }
+        });
         
         const chat_avatar_div = document.createElement("div");
         const chat_avatar_img = document.createElement("img");
@@ -70,13 +78,29 @@ export class SidebarUI implements ObjectUI {
         this.sidebarDiv.append(chat_info_button);
     }
 
-    getMessageInChat(chat_id: number) {
-        console.log(chat_id);
-        const chat_info = document.querySelector(`#chat_${chat_id}_info`);
-        console.log(chat_info);
-        if (chat_info) this.sidebarDiv.children[1].after(chat_info);
-        
+    async startChat() {
+        for(;;) {
+            const req = await this.chat.newChatUpdate();
+            this.addChat(req.intoChatUserWithInof()); 
+            console.log(req);
+        }
     }
+
+    async sendNewMessageChecker() {
+        for (;;) {
+            const chat_id = await this.chat.sendChatMessage();
+            this.updateInChat(chat_id);
+        }
+    }
+
+    updateInChat(chat_id: number) {
+        const chat_info = document.querySelector(`#chat_${chat_id}_info`);
+        if (chat_info) this.sidebarDiv.children[2].after(chat_info);
+    }
+
+    getMessageInChat(chat_id: number) {
+        this.updateInChat(chat_id);
+    }   
 
     show(){
         
