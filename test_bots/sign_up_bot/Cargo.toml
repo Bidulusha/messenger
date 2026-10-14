@@ -1,0 +1,9 @@
+[package]
+name = "sign_up_bot"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+bot = { version = "0.1.0", path = "../bot" }
+form_structures = { version = "0.1.0", path = "../form_structures" }
+reqwest = "0.13.5"

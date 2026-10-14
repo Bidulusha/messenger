@@ -10,7 +10,7 @@ form.element.addEventListener("submit", async (e: Event) => {
     try{
         form.update();
         const respons = await fetch(
-            AUTH_API_URL + "/api/auth/sign_up_auth",
+            AUTH_API_URL + "/api/auth/sign_up_auth", // Request to api must be to general gateway (site domen/ip)
             {
                 method: "POST",
                 headers: {

@@ -14,6 +14,9 @@ export const STATIC_URL = "/static"
 export const AVATARS_URL = STATIC_URL + "/images/avatars/"
 
 // Pages 
+/*
+Requests to api must be to general gateway (domen/ip)
+*/
 export const AUTH_API_URL = BASE_URL + ":8081";
 export const CHAT_URL = BASE_URL + ":3000/chat";
 export const SIGN_IN_URL = BASE_URL + ":3000/sign_in";
