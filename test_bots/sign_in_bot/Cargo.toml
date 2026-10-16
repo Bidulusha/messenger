@@ -9,6 +9,7 @@ async-trait = { workspace = true }
 bot = { workspace = true }
 bot_errors = { version = "0.1.0", path = "../bot_errors" }
 chrono = { workspace = true }
+colored = "3.1.1"
 form_structures = { workspace = true }
 futures = "0.3.34"
 reqwest = { workspace = true, features = ["blocking", "json"] }
