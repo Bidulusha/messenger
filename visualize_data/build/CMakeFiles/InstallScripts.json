@@ -1,0 +1,11 @@
+{
+	"InstallScripts" : 
+	[
+		"/Users/vadim/Projects/Rust/github/messenger/visualize_daat/build/cmake_install.cmake",
+		"/Users/vadim/Projects/Rust/github/messenger/visualize_daat/build/matplotplusplus/cmake_install.cmake",
+		"/Users/vadim/Projects/Rust/github/messenger/visualize_daat/build/matplotplusplus/source/cmake_install.cmake",
+		"/Users/vadim/Projects/Rust/github/messenger/visualize_daat/build/matplotplusplus/source/3rd_party/cmake_install.cmake",
+		"/Users/vadim/Projects/Rust/github/messenger/visualize_daat/build/matplotplusplus/source/matplot/cmake_install.cmake"
+	],
+	"Parallel" : false
+}

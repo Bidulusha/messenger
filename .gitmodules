@@ -1,0 +1,3 @@
+[submodule "visualize_data/matplotplusplus"]
+	path = visualize_data/matplotplusplus
+	url = https://github.com/alandefreitas/matplotplusplus

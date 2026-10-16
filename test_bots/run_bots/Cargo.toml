@@ -4,6 +4,9 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
-bot = { version = "0.1.0", path = "../bot" }
-sign_up_bot = { version = "0.1.0", path = "../sign_up_bot" }
-tokio = { version = "1.53.3", features = ["full"] }
+additional_functions = { workspace = true }
+bot = { workspace = true }
+csv = { workspace = true }
+sign_in_bot = { version = "0.1.0", path = "../sign_in_bot" }
+sign_up_bot = { workspace = true }
+tokio = { workspace = true, features = ["full"] }

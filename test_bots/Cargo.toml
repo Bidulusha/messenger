@@ -1,3 +1,16 @@
 [workspace]
 resolver = "3"
-members = ["bot", "form_structures","run_bots","sign_up_bot"]
+members = ["additional_functions","bot", "bot_errors", "form_structures","run_bots", "sign_in_bot","sign_up_bot"]
+
+[workspace.dependencies]
+additional_functions = { version = "0.1.0", path = "additional_functions" }
+async-trait = "0.1.92"
+bot = { version = "0.1.0", path = "bot" }
+chrono = "0.4.45"
+csv = "1.4.0"
+form_structures = { version = "0.1.0", path = "form_structures" }
+reqwest = "0.13.5"
+serde = "1.0.229"
+serde_json = "1.0.154"
+sign_up_bot = { version = "0.1.0", path = "sign_up_bot" }
+tokio = "1.53.3"

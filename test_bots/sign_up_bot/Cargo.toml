@@ -4,6 +4,11 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
-bot = { version = "0.1.0", path = "../bot" }
-form_structures = { version = "0.1.0", path = "../form_structures" }
-reqwest = "0.13.5"
+additional_functions = { workspace = true }
+async-trait = { workspace = true }
+bot = { workspace = true }
+bot_errors = { version = "0.1.0", path = "../bot_errors" }
+chrono = { workspace = true }
+form_structures = { workspace = true }
+reqwest = { workspace = true, features = ["json"] }
+serde_json = { workspace = true }
